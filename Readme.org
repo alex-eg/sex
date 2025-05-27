@@ -5,6 +5,15 @@ Sex is a S-expressions language, which transpiles to C.
 Sex is written in Chicken Scheme, so first you'll need to get yourself
 a Chicken.
 
+It also has a couple of Chicken deps.
+
+** Install Chicken Eggs
+By the way, there's a way to make Chicken install eggs non-globally. Refer to
+the documentation for more info:
+https://wiki.call-cc.org/man/5/Extension%20tools#changing-the-repository-location
+
+~chicken-install fmt tree brev-separate~
+
 ** Compilation
 ~make~
 
