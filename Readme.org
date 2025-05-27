@@ -18,9 +18,11 @@ cc hello_world.c -o hello_world
 * Features
 ** Full C interoperability
 Just ~(include "Your/Favourite/Library.h")~ and use it as you would
-have is C. For hardcore fans of traditional Lisp naming convention,
+have is C.
+
+For hardcore fans of traditional Lisp naming convention,
 Sex offers automatic unkebabification of all symbols, i.e. no more
-ugly ~GL_ARRAY_BUFFER~'s in your code, they may be writted in their
+ugly ~GL_ARRAY_BUFFER~s in your code, they may be writted in their
 proper form: ~GL-ARRAY-BUFFER~.
 
 ** Use an established environment for development
