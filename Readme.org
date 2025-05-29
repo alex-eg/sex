@@ -4,7 +4,7 @@ Sex is a S-expressions language, which transpiles to C.
 Sex is also Chicken, since all source processing and compile-time
 computations are written in Chicken.
 
-And Chicken is R5RS Scheme.
+And Chicken is [[https://call-cc.org][R5RS Scheme]].
 
 * Compilation and usage
 First, get yourself a Chicken. Second, one Chicken deps.
