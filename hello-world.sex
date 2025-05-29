@@ -1,10 +1,13 @@
 (include stdio.h)
-(include unistd.h)
+
+(define (foo)
+  "Hello from Chicken code!\n")
 
 (fn int main ((int argc) (char **argv))
     (puts "Hello from Sex!")
-    (var (array char 513) name)
+    (var (array char 512) name)
     (puts "What is your name?")
     (scanf "%s" &name)
     (printf "Hello, %s!\n" name)
+    (printf ,(foo))
     0)

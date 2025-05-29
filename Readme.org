@@ -1,18 +1,20 @@
 * The Sex language
 Sex is a S-expressions language, which transpiles to C.
 
-* Compilation and usage
-Sex is written in Chicken Scheme, so first you'll need to get yourself
-a Chicken.
+Sex is also Chicken, since all source processing and compile-time
+computations are written in Chicken.
 
-It also has a couple of Chicken deps.
+And Chicken is R5RS Scheme.
+
+* Compilation and usage
+First, get yourself a Chicken. Second, one Chicken deps.
 
 ** Install Chicken Eggs
 By the way, there's a way to make Chicken install eggs non-globally. Refer to
 the documentation for more info:
 https://wiki.call-cc.org/man/5/Extension%20tools#changing-the-repository-location
 
-~chicken-install fmt tree brev-separate~
+~chicken-install fmt~
 
 ** Compilation
 ~make~
@@ -22,6 +24,43 @@ You'll also need a C compiler, so pick any.
 #+begin_src
 cat hello-world.sex | sexc > hello_world.c
 cc hello_world.c -o hello_world
+#+end_src
+
+* Example
+Here is an example, demonstrating what Sex source looks like, and what
+it compiles too. An avid reader also shall notice how we call Chicken
+procedures in Sex source.
+
+The Sex source:
+#+begin_src
+(include stdio.h)
+
+(define (foo)
+  "Hello from Chicken code!\n")
+
+(fn int main ((int argc) (char **argv))
+    (puts "Hello from Sex!")
+    (var (array char 512) name)
+    (puts "What is your name?")
+    (scanf "%s" &name)
+    (printf "Hello, %s!\n" name)
+    (printf ,(foo))
+    0)
+#+end_src
+
+The resulting C source:
+#+begin_src
+#include <stdio.h>
+
+int main (int argc, char **argv) {
+    puts("Hello from Sex!");
+    char name[512];
+    puts("What is your name?");
+    scanf("%s", &name);
+    printf("Hello, %s!\n", name);
+    printf("Hello from Chicken code!\n");
+    return 0;
+}
 #+end_src
 
 * Features
