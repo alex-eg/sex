@@ -4,6 +4,7 @@
   (string->symbol
    (string-translate (symbol->string sym) #\- #\_)))
 
+; Maybe rewrite with tree inversions?
 (define (map-filter-tree map-proc filter-proc tree)
   "Walk the tree, checking each element with filter-proc.
 If filter-proc returns #t:
