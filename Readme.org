@@ -7,14 +7,14 @@ computations are written in Chicken.
 And Chicken is [[https://call-cc.org][R5RS Scheme]].
 
 * Compilation and usage
-First, get yourself a Chicken. Second, one Chicken deps.
+First, get yourself a Chicken. Second, some Chicken deps.
 
 ** Install Chicken Eggs
 By the way, there's a way to make Chicken install eggs non-globally. Refer to
 the documentation for more info:
 https://wiki.call-cc.org/man/5/Extension%20tools#changing-the-repository-location
 
-~chicken-install fmt~
+~chicken-install fmt getopt-long~
 
 ** Compilation
 ~make~
