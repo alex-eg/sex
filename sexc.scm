@@ -3,7 +3,9 @@
         (chicken string)
         fmt
         fmt-c
-        getopt-long)
+        getopt-long
+        srfi-1 ; list routines
+        )
 
 (define (unkebabify sym)
   (string->symbol
@@ -63,7 +65,8 @@ If filter-proc returns something other, use it instead of processing the element
       (cons
        (let ((r (read)))
          (when (eof-object? r)
-           (return (reverse collect)))
+           (return (filter (lambda (e) (not (null? e)))
+                           (reverse collect))))
          (case (car r)
            ((define)
             (eval r)
@@ -76,8 +79,7 @@ If filter-proc returns something other, use it instead of processing the element
 
 (define (emit-c forms)
   (map (lambda (form)
-         (if (not (null? form))
-             (fmt #t (c-expr form)))
+         (fmt #t (c-expr form))
          (fmt #t "\n"))
        forms))
 
