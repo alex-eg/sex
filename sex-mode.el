@@ -30,6 +30,7 @@ All commands in `lisp-mode-shared-map' are inherited by this map.")
      (list (concat "("
                    (regexp-opt '("include"
                                  "fn"
+                                 "pub"
                                  "struct"
                                  "template"
                                  "var")

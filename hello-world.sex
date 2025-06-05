@@ -3,7 +3,7 @@
 (define (foo)
   "Hello from Chicken code!\n")
 
-(fn int main ((int argc) (char **argv))
+(pub fn int main ((int argc) (char **argv))
     (puts "Hello from Sex!")
     (var (array char 512) name)
     (puts "What is your name?")

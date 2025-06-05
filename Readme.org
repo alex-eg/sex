@@ -14,7 +14,7 @@ By the way, there's a way to make Chicken install eggs non-globally. Refer to
 the documentation for more info:
 https://wiki.call-cc.org/man/5/Extension%20tools#changing-the-repository-location
 
-~chicken-install fmt getopt-long~
+~chicken-install fmt getopt-long brev-separate~
 
 ** Compilation
 ~make~
@@ -38,7 +38,7 @@ The Sex source:
 (define (foo)
   "Hello from Chicken code!\n")
 
-(fn int main ((int argc) (char **argv))
+(pub fn int main ((int argc) (char **argv))
     (puts "Hello from Sex!")
     (var (array char 512) name)
     (puts "What is your name?")
