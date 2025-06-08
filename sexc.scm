@@ -1,4 +1,5 @@
 (import brev-separate
+        (chicken pathname)
         (chicken pretty-print)
         (chicken process-context)
         (chicken string)
@@ -125,8 +126,20 @@
         'stdin
         (cadr rest-args))))
 
+(define (read-from-file file)
+  (with-input-from-file (pathname-strip-directory file)
+    (fn (read-forms (list)))))
+
+(define (set-working-directory file)
+  (change-directory
+   (normalize-pathname
+    (make-absolute-pathname
+     (current-directory)
+     (pathname-directory file)))))
+
 (define (main)
   (let* ((raw-args (command-line-arguments))
+         (current-dir (current-directory))
          (args (getopt-long raw-args
                             opts-grammar))
          (output (get-arg args 'output 'stdout))
@@ -136,9 +149,11 @@
         (let* ((raw-forms
                 (if (eq? input 'stdin)
                     (read-forms (list))
-                    (with-input-from-file input
-                      (lambda () (read-forms (list))))))
+                    (begin
+                      (set-working-directory input)
+                      (read-from-file input))))
                (sex-forms (process-raw-forms raw-forms (list))))
+          (change-directory current-dir)
           (if (get-arg args 'macro-expand #f)
               (map pp sex-forms)
               (if (not (eq? output 'stdout))
