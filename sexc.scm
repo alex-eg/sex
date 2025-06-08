@@ -10,8 +10,14 @@
         tree)
 
 (define (unkebabify sym)
-  (string->symbol
-   (string-translate (symbol->string sym) #\- #\_)))
+  (case sym
+    ((-) sym)
+    ((--) sym)
+    ((->) sym)
+    ((-=) sym)
+    (else
+     (string->symbol
+      (string-translate (symbol->string sym) #\- #\_)))))
 
 (define (atom-to-fmt-c atom)
   (case atom
