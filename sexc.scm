@@ -20,7 +20,7 @@
     ((begin) '%begin)
     ((pointer) '%pointer)
     ((array) '%array)
-    (([]) 'vector-ref)
+    ((@) 'vector-ref)
     ((include) '%include)
     ((cast) '%cast)
     (else
