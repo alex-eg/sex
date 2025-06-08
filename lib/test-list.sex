@@ -1,0 +1,22 @@
+(include stdlib.h)
+(include stddef.h)
+(include stdbool.h)
+(include stdio.h)
+
+(load "list.hsex")
+
+(instance list-int list-T (int))
+(instance make-list-int make-list-T (int))
+(instance add-value-list-int add-value-list-T (int))
+(instance length-list-int length-list-T (int))
+(instance is-empty-list-int is-empty-list-T (int))
+
+(pub fn int main ()
+     (var (* list-int) l (make-list-int))
+     (printf "Size of the list: %zu\n" (length-list-int l))
+     (add-value-list-int l 3)
+     (add-value-list-int l 4)
+     (printf "Size of the list: %zu\n" (length-list-int l))
+     ,(list-for-each l v (printf "%d " v))
+     (printf "\n")
+     0)

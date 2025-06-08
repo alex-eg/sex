@@ -1,3 +1,6 @@
+(declare (unit sexc)
+         (uses templates))
+
 (import brev-separate
         (chicken pathname)
         (chicken pretty-print)
@@ -8,6 +11,8 @@
         getopt-long
         srfi-1                          ; list routines
         tree)
+
+(define +debug+ #f)
 
 (define (unkebabify sym)
   (case sym
@@ -75,7 +80,9 @@
 (define (process-form form acc)
   (case (car form)
     ((define) (eval form) acc)
+    ((template) (eval form) acc)
     ((load) (eval form) acc)
+    ((instance) (walk-sex-tree (eval form) acc))
     (else
      (walk-sex-tree form acc))))
 
@@ -167,5 +174,3 @@
                     (lambda ()
                       (emit-c sex-forms)))
                   (emit-c sex-forms)))))))
-
-(main)

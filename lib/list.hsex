@@ -1,3 +1,40 @@
-(template (T) struct list
-    (var T value)
-    ())
+(template (T)
+  struct list-T
+  ((T value)
+   ((list-T *) next)))
+
+(template (T)
+  pub fn (list-T *) make-list-T ()
+  (var (list-T *) list (malloc (sizeof list-T)))
+  (= (-> list next) NULL)
+  list)
+
+(template (T)
+  pub fn void add-value-list-T ((list-T *list) (T value))
+  (while (!= (-> list next) NULL)
+    (= list (-> list next)))
+  (= (-> list next) (make-list-T))
+  (= (-> list value) value))
+
+(template (T)
+  pub fn size-t length-list-T ((list-T *list))
+  (var size-t n 0)
+  (while (!= (-> list next) NULL)
+    (= list (-> list next))
+    (++ n))
+  n)
+
+(template (T)
+  pub fn bool is-empty-list-T ((list-T *list))
+  (== (-> list next) NULL))
+
+(define-syntax list-for-each
+  (syntax-rules ()
+    ((_ list-var elt-var what-do ...)
+     '(begin
+        ;; todo: that int here is not good
+        (var int elt-var (-> list-var value))
+        (while (!= (-> list-var next) NULL)
+         what-do ...
+         (= list-var (-> list-var next))
+         (= elt-var (-> list-var value)))))))
