@@ -3,7 +3,12 @@
 (define (foo)
   "Hello from Chicken code!\n")
 
+(struct foo
+  ((int a)
+   (float b)))
+
 (pub fn int main ((int argc) (char **argv))
+    (var int a 10)
     (puts "Hello from Sex!")
     (var (array char 512) name)
     (puts "What is your name?")

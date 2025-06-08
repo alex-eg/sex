@@ -73,6 +73,9 @@ Sex offers automatic unkebabification of all symbols, i.e. no more
 ugly ~GL_ARRAY_BUFFER~ s in your code, they may be written in their
 proper form: ~GL-ARRAY-BUFFER~.
 
+** Auto typedef for structs
+Probably harmless idk.
+
 ** Use an established environment for development
 As Sex is S-expressions, you always have Emacs with paredit as your
 best option.

@@ -34,39 +34,49 @@
         #f)))
 
 (define (walk-generic form)
-  (let loop ((tree (tree-map atom-to-fmt-c form)))
-    (let ((unquote-form (tree-find (tree-finder 'unquote) tree #f)))
-      (if unquote-form
-          (let ((inv (invert-tree tree)))
-            (loop (tree-replace inv unquote-form (eval (cadr unquote-form)))))
-          tree))))
+  (tree-map
+   atom-to-fmt-c
+   (let ((ret-form form))
+     (let loop ((unquote-form (tree-find (tree-finder 'unquote) form #f)))
+       (if unquote-form
+           (begin
+             (set! ret-form (tree-replace (invert-tree form)
+                                          unquote-form
+                                          (eval (cadr unquote-form))))
+             (loop (tree-find (tree-finder 'unquote)
+                              ret-form
+                              #f)))
+           ret-form)))))
 
 (define (walk-function form static)
   (if static
       (list 'static (walk-generic form))
       (walk-generic (cdr form))))
 
-(define (walk-sex-tree form)
-  (case (car form)
-    ((fn) (walk-function form #t))
-    ((pub) (walk-function form #f))
-    ((template) '())                      ; TODO
-    ((struct) (walk-generic form))
-    (else (walk-generic form))))
+(define (walk-struct form acc)
+  (let ((name (unkebabify (cadr form))))
+    (cons (walk-generic form)
+          (cons `(typedef struct ,name ,name) acc))))
 
-(define (process-form form)
+(define (walk-sex-tree form acc)
   (case (car form)
-    ((define)
-     (eval form) '())
+    ((fn) (cons (walk-function form #t) acc))
+    ((pub) (cons (walk-function form #f) acc))
+    ((struct) (walk-struct form acc))
+    (else (cons (walk-generic form) acc))))
+
+(define (process-form form acc)
+  (case (car form)
+    ((define) (eval form) acc)
+    ((load) (eval form) acc)
     (else
-     (walk-sex-tree form))))
+     (walk-sex-tree form acc))))
 
 (define (process-raw-forms raw-forms acc)
   (if (null? raw-forms) (filter (fn (not (null? x)))
                                 (reverse acc))
       (process-raw-forms (cdr raw-forms)
-                         (cons (process-form (car raw-forms))
-                               acc))))
+                         (process-form (car raw-forms) acc))))
 
 (define (read-forms acc)
   (let ((r (read)))
