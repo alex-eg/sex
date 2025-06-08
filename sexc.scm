@@ -85,10 +85,10 @@
         (read-forms (cons r acc)))))
 
 (define (emit-c forms)
-  (map (lambda (form)
-         (fmt #t (c-expr form))
-         (fmt #t "\n"))
-       forms))
+  (for-each (lambda (form)
+              (fmt #t (c-expr form))
+              (fmt #t "\n"))
+            forms))
 
 ;;; Main function facilities
 
