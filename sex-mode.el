@@ -1,4 +1,4 @@
-(require 'lisp-mode)
+(require 'scheme)
 
 (defgroup sex-mode nil
   "Major mode for Sex code."
@@ -7,8 +7,8 @@
 
 (define-abbrev-table 'sex-mode-abbrev-table ()
   "Abbrev table for Sex mode.
-It has `lisp-mode-abbrev-table' as its parent."
-  :parents (list lisp-mode-abbrev-table))
+It has `scheme-mode-abbrev-table' as its parent."
+  :parents (list scheme-mode-abbrev-table))
 
 (defvar sex-mode-syntax-table
   (let ((table (make-syntax-table lisp-data-mode-syntax-table)))
