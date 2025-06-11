@@ -45,37 +45,44 @@
              (eq? (car node) symbol))
         #f)))
 
-(define (walk-generic form)
-  (tree-map
-   atom-to-fmt-c
-   (let ((ret-form form))
-     (let loop ((unquote-form (tree-find (tree-finder 'unquote) form #f)))
-       (if unquote-form
-           (begin
-             (set! ret-form (tree-replace (invert-tree form)
-                                          unquote-form
-                                          (eval (cadr unquote-form))))
-             (loop (tree-find (tree-finder 'unquote)
-                              ret-form
-                              #f)))
-           ret-form)))))
+(define (walk-generic form acc)
+  (if (eq? (car form) 'unquote)
+      ;; special case - replace top-level unquote with it's expansion
+      (append
+       (fold append (list)
+             (map (fn (walk-sex-tree x (list)))
+                  (eval (cadr form))))
+       acc)
+      (let loop ((unquote-form (tree-find (tree-finder 'unquote) form #f)))
+        (if unquote-form
+            (begin
+              (let* ((inv (invert-tree form))
+                     (pos (tree-local-position inv unquote-form)))
+                (for-each (fn
+                           (set! form (tree-insert inv (tree-parent inv unquote-form) pos x))
+                           (set! inv (invert-tree form)))
+                          (reverse (eval (cadr unquote-form))))
+                (set! form (tree-prune inv unquote-form)))
+              (loop (tree-find (tree-finder 'unquote)
+                               form
+                               #f)))
+            (cons (tree-map atom-to-fmt-c form) acc)))))
 
-(define (walk-function form static)
+(define (walk-function form static acc)
   (if static
-      (list 'static (walk-generic form))
-      (walk-generic (cdr form))))
+      (walk-generic (list 'static form) acc)
+      (walk-generic (cdr form) acc)))
 
 (define (walk-struct form acc)
   (let ((name (unkebabify (cadr form))))
-    (cons (walk-generic form)
-          (cons `(typedef struct ,name ,name) acc))))
+    (walk-generic form (cons `(typedef struct ,name ,name) acc))))
 
 (define (walk-sex-tree form acc)
   (case (car form)
-    ((fn) (cons (walk-function form #t) acc))
-    ((pub) (cons (walk-function form #f) acc))
+    ((fn) (walk-function form #t acc))
+    ((pub) (walk-function form #f acc))
     ((struct) (walk-struct form acc))
-    (else (cons (walk-generic form) acc))))
+    (else (walk-generic form acc))))
 
 (define (process-form form acc)
   (case (car form)
