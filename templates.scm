@@ -6,7 +6,6 @@
         srfi-1                          ; list routines
         tree)
 
-
 (define-syntax template
   (syntax-rules ()
     ((_ (name subst-list args ...) body ...)
