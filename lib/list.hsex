@@ -6,8 +6,8 @@
 (template (make-list-T (T) is-public?)
   (,@(if is-public? '(pub) '()) fn (* list-T) make-list-T ()
    (var (* list-T) list (cast (* list-T) (malloc (sizeof list-T))))
-    (= (-> list next) NULL)
-    list))
+   (= (-> list next) NULL)
+   list))
 
 (template (add-value-list-T (T) is-public?)
   (,@(if is-public? '(pub) '()) fn void add-value-list-T ((list-T *list) (T value))
