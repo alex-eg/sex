@@ -45,57 +45,73 @@
              (eq? (car node) symbol))
         #f)))
 
+(define (make-field-access form)
+  (assert (= 2 (length form)) "Wrong field access format")
+  (unkebabify
+   (string->symbol
+    (fmt #f (cadr form) (car form)))))
+
 (define (walk-generic form acc)
-  (if (eq? (car form) 'unquote)
-      ;; special case - replace top-level unquote with it's expansion
-      (append
-       (fold append (list)
-             (map (fn (walk-sex-tree x (list)))
-                  (eval (cadr form))))
-       acc)
-      (let loop ((unquote-form (tree-find (tree-finder 'unquote) form #f)))
-        (if unquote-form
-            (begin
-              (let* ((inv (invert-tree form))
-                     (pos (tree-local-position inv unquote-form)))
-                (for-each (fn
-                           (set! form (tree-insert inv (tree-parent inv unquote-form) pos x))
-                           (set! inv (invert-tree form)))
-                          (reverse (eval (cadr unquote-form))))
-                (set! form (tree-prune inv unquote-form)))
-              (loop (tree-find (tree-finder 'unquote)
-                               form
-                               #f)))
-            (cons (tree-map atom-to-fmt-c form) acc)))))
+  (cond
+   ((null? form) (cons '() acc))
+   ((not (list? form)) (cons (atom-to-fmt-c form) acc))
+
+   ;; special case - replace unquote with its expansion
+   ((eq? (car form) 'unquote)
+    (fold
+     cons
+     acc
+     (car                               ; bc walk-sex-tree always
+                                        ; wraps its result
+      (walk-sex-tree (eval (cadr form)) (list)))))
+
+   ;; another special case - field access
+   ((and (symbol? (car form))
+         (char=? #\. (string-ref (symbol->string (car form)) 0)))
+    (cons (make-field-access form) acc))
+   ;; toplevel, or a start of a regular list form
+   (else
+    (let ((new-acc (list)))
+      (cons (reverse
+             (fold
+              walk-generic
+              new-acc
+              form))
+            acc)))))
 
 (define (walk-function form static acc)
   (if static
-      (walk-generic (list 'static form) acc)
-      (walk-generic (cdr form) acc)))
+      (append (walk-generic (list 'static form) (list)) acc)
+      (append (walk-generic (cdr form) (list)) acc)))
 
 (define (walk-struct form acc)
   (let ((name (unkebabify (cadr form))))
-    (walk-generic form (cons `(typedef struct ,name ,name) acc))))
+    (append (walk-generic form (list))
+          (cons `(typedef struct ,name ,name) acc))))
 
 (define (walk-sex-tree form acc)
   (case (car form)
     ((fn) (walk-function form #t acc))
     ((pub) (walk-function form #f acc))
-    ((struct) (walk-struct form acc))
-    (else (walk-generic form acc))))
+    ((struct union) (walk-struct form acc))
+    ((unquote) (fold (fn (walk-sex-tree x y))
+                     acc
+                     (eval (cadr form))))
+
+    (else (append (walk-generic form (list)) acc))))
 
 (define (process-form form acc)
   (case (car form)
     ((define) (eval form) acc)
     ((template) (eval form) acc)
     ((load) (eval form) acc)
-    ((instance) (walk-sex-tree (eval form) acc))
     (else
      (walk-sex-tree form acc))))
 
+
 (define (process-raw-forms raw-forms acc)
-  (if (null? raw-forms) (filter (fn (not (null? x)))
-                                (reverse acc))
+  (if (null? raw-forms)
+      (reverse acc)
       (process-raw-forms (cdr raw-forms)
                          (process-form (car raw-forms) acc))))
 
