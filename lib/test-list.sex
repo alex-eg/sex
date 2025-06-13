@@ -3,7 +3,7 @@
 (include stdbool.h)
 (include stdio.h)
 
-(load "list.hsex")
+(load "list.seh")
 
 (struct foo
   ((float a)
