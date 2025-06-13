@@ -74,7 +74,99 @@ ugly ~GL_ARRAY_BUFFER~ s in your code, they may be written in their
 proper form: ~GL-ARRAY-BUFFER~.
 
 ** Auto typedef for structs
-Probably harmless idk.
+Probably harmless idk. Example:
+#+begin_src
+(struct foo
+  ((float a)
+   (int b)))
+#+end_src
+expands to
+#+begin_src
+typedef struct foo foo;
+
+struct foo {
+    float a;
+    int b;
+};
+#+end_src
+
+** Templating (and Chickening)
+Sex has support for template substitutions. Any piece of code can be
+templated. After declaring, templates should be instanced in order to
+be used. To instance template, use ~,~-prefixed form in Sex
+code. During instancing, template arguments in the body get
+replaced with provided values by the following rules:
+1. If the value is a symbol, all arguments in a body are replaced with
+   the value, and also all /parts/ of any other symbol equal to the
+   value also get replaced.
+2. If the value is a form, all arguments in a body are replaced with it,
+   but no symbolic substitution is performed.
+
+In general, the form of a template declaration is like this:
+#+begin_src
+(template (name (substiture-args ...) other-args ...)
+  body ...)
+#+end_src
+
+Exapmle:
+#+begin_src
+(template (list-T (T))
+  (struct list-T
+    ((T value)
+     ((* list-T) next))))
+
+(template (list-for-each (what-do type list-var elt-var))
+  (var type elt-var (-> list-var value))
+  (while (!= (-> list-var next) NULL)
+    what-do
+    (= list-var (-> list-var next))
+    (= elt-var (-> list-var value))))
+
+; ... somewhere later
+,(list-T '(int))
+
+(pub fn void print-list (const list-int *l)
+     ,(list-for-each '((printf "%d " v) int l v))
+     (printf "\n"))
+#+end_src
+Then will be expanded in the following code:
+#+begin_src
+(typedef struct list_int list_int)
+(struct list_int ((int value) ((* list_int) next)))
+(%fun void
+      print_list
+      (const list_int *l)
+      (%var int v (-> l value))
+      (while (!= (-> l next) NULL)
+             (printf "%d " v)
+             (= l (-> l next))
+             (= v (-> l value)))
+      (printf "\n"))
+#+end_src
+
+And then translated to:
+#+begin_src
+typedef struct list_int list_int;
+
+struct list_int {
+    int value;
+    list_int *next;
+};
+
+void print_list (int const, int list_int, int *l) {
+    int v = l->value;
+    while (l->next != NULL) {
+        printf("%d ", v);
+        l = l->next;
+        v = l->value;
+    }
+    printf("\n");
+}
+#+end_src
+
+Also, as a bonus, not only a template can be used after ~,~ in Sex
+source, but in fact any Chicken code you want to run during the
+transpilation.
 
 ** Use an established environment for development
 As Sex is S-expressions, you always have Emacs with paredit as your
