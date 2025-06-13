@@ -34,7 +34,8 @@ All commands in `lisp-mode-shared-map' are inherited by this map.")
                                  "pub"
                                  "struct"
                                  "template"
-                                 "var")
+                                 "var"
+                                 "union")
                                'word)
                    "\\>"
                    "[[:space:]]*"
