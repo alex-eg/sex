@@ -27,6 +27,7 @@
 (define (atom-to-fmt-c atom)
   (case atom
     ((fn) '%fun)
+    ((prototype) '%prototype)
     ((var) '%var)
     ((begin) '%begin)
     ((pointer) '%pointer)
@@ -89,9 +90,22 @@
     (append (walk-generic form (list))
           (cons `(typedef struct ,name ,name) acc))))
 
+(define (walk-extern form acc)
+  (case (cadr form)
+    ((fn)
+     (append
+      (walk-generic (list 'extern (cons 'prototype (cddr form))) (list))
+      acc))
+    ((var)
+     (append
+      (walk-generic (list 'extern (cdr form)) (list))
+      acc))
+    (else (error "Extern what?"))))
+
 (define (walk-sex-tree form acc)
   (case (car form)
     ((fn) (walk-function form #t acc))
+    ((extern) (walk-extern form acc))
     ((pub) (walk-function form #f acc))
     ((struct union) (walk-struct form acc))
     ((unquote) (fold (fn (walk-sex-tree x y))

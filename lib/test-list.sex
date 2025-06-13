@@ -17,6 +17,9 @@
 
 (fn bool bar () false)
 
+(extern fn void puk ((int a) (float b)))
+(extern var int i)
+
 (pub fn int main ()
      (var (* list-int) l (make-list-int))
      (printf "Size of the list: %zu\n" (length-list-int l))
