@@ -80,10 +80,21 @@
               form))
             acc)))))
 
+(define (normalize-fn-form form)
+  ;; (fn ret-type name arglist body) -> normal function
+  ;; (fn ret-type name arglist) -> prototype
+  (if (>= (length form) 5)
+      form
+      (cons 'prototype (cdr form))))
+
 (define (walk-function form static acc)
   (if static
-      (append (walk-generic (list 'static form) (list)) acc)
-      (append (walk-generic (cdr form) (list)) acc)))
+      (append (walk-generic (list 'static (normalize-fn-form form))
+                            (list))
+              acc)
+      (append (walk-generic (normalize-fn-form (cdr form))
+                            (list))
+              acc)))
 
 (define (walk-struct form acc)
   (let ((name (unkebabify (cadr form))))
@@ -94,11 +105,11 @@
   (case (cadr form)
     ((fn)
      (append
-      (walk-generic (list 'extern (cons 'prototype (cddr form))) (list))
+      (list (cons 'extern (walk-function form #f (list))))
       acc))
     ((var)
      (append
-      (walk-generic (list 'extern (cdr form)) (list))
+      (list (cons 'extern (walk-generic (cdr form) (list))))
       acc))
     (else (error "Extern what?"))))
 

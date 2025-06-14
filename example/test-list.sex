@@ -13,7 +13,8 @@
 (struct foo
   ((float a)
    (int b)
-   ((const char *) c)))
+   ((const char *) c)
+   ((fn bool ((bool val))) not)))
 
 ,(list-T '(int))
 ,(make-list-T '(int) #f)
@@ -38,3 +39,8 @@
      ,(list-for-each '((printf "%d " v) l v))
      (printf "\n")
      0)
+
+(pub fn segs-renderer* create-renderer ())
+(pub fn void clear-command-buffer ((segs-renderer *r)))
+(pub fn void add-render-command ((segs-renderer *r) ((fn void ()) command)))
+(pub fn void commit-command-buffer ((segs-renderer *r)))
