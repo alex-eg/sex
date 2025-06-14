@@ -129,7 +129,8 @@
   (case (car form)
     ((define) (eval form) acc)
     ((template) (eval form) acc)
-    ((load) (eval form) acc)
+    ((chicken-load)
+     (load (cadr form)) acc)
     ((chicken-import)
      (eval (cons 'import (cdr form))) acc)
     (else

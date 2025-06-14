@@ -29,6 +29,7 @@ All commands in `lisp-mode-shared-map' are inherited by this map.")
      ;; Declarations
      (list (concat "("
                    (regexp-opt '("chicken-import"
+                                 "chicken-load"
                                  "extern"
                                  "include"
                                  "fn"
