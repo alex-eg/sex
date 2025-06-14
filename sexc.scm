@@ -140,7 +140,7 @@
 
 (define (process-form form acc)
   (case (car form)
-    ((define) (eval form) acc)
+    ((chicken-define) (eval form) acc)
     ((template) (eval form) acc)
     ((chicken-load)
      (load (cadr form)) acc)

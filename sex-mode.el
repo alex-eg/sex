@@ -28,10 +28,11 @@ All commands in `lisp-mode-shared-map' are inherited by this map.")
     (list
      ;; Declarations
      (list (concat "("
-                   (regexp-opt '("chicken-import"
+                   (regexp-opt '("chicken-define"
+                                 "chicken-define-syntax"
+                                 "chicken-import"
                                  "chicken-load"
                                  "define"
-                                 "define-syntax"
                                  "extern"
                                  "include"
                                  "fn"
