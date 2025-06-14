@@ -25,7 +25,7 @@
                               (fmt #f "([^\\-]?)" (symbol->string (car x)) "([\\-$]?)")
                               (fmt #f "\\1" (symbol->string (cdr x)) "\\2"))
                              x))
-                        (filter (fn (not (list? (cdr x)))) subst-alist))))
+                        (filter (fn (symbol? (cdr x))) subst-alist))))
     (string->symbol
      (string-substitute* str subst-map))))
 
