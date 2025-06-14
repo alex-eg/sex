@@ -7,7 +7,8 @@
 
 (struct foo
   ((float a)
-   (int b)))
+   (int b)
+   ((const char *) c)))
 
 ,(list-T '(int))
 ,(make-list-T '(int) #f)
@@ -15,10 +16,14 @@
 ,(length-list-T '(int) #f)
 ,(is-empty-list-T '(int) #f)
 
-(fn bool bar () false)
 
 (extern fn void puk ((int a) (float b)))
+(fn bool bar () false)
+(pub fn void baz () true)
+
 (extern var int i)
+(var int j)
+(pub var int k)
 
 (pub fn int main ()
      (var (* list-int) l (make-list-int))

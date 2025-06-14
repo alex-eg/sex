@@ -102,11 +102,19 @@
       acc))
     (else (error "Extern what?"))))
 
+(define (walk-public form acc)
+  (case (cadr form)
+    ((fn)
+     (walk-function form #f acc))
+    ((var)
+     (append (walk-generic (list 'static (cdr form)) (list)) acc))
+    (else (error "Pub what?"))))
+
 (define (walk-sex-tree form acc)
   (case (car form)
     ((fn) (walk-function form #t acc))
     ((extern) (walk-extern form acc))
-    ((pub) (walk-function form #f acc))
+    ((pub) (walk-public form acc))
     ((struct union) (walk-struct form acc))
     ((unquote) (fold (fn (walk-sex-tree x y))
                      acc
