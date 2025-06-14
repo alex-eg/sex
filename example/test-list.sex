@@ -38,6 +38,7 @@
      (printf "Size of the list: %zu\n" (length-list-int l))
      ,(list-for-each '((printf "%d " v) l v))
      (printf "\n")
+     (printf "%zu\n" l->next)
      0)
 
 (pub fn segs-renderer* create-renderer ())

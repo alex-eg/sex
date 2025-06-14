@@ -9,6 +9,7 @@
         fmt
         fmt-c
         getopt-long
+        regex
         srfi-1                          ; list routines
         tree)
 
@@ -22,7 +23,8 @@
     ((-=) sym)
     (else
      (string->symbol
-      (string-translate (symbol->string sym) #\- #\_)))))
+      (string-substitute "-(?!>)" "_"
+                         (symbol->string sym) #t)))))
 
 (define (atom-to-fmt-c atom)
   (case atom
