@@ -58,6 +58,15 @@
 (define (walk-generic form acc)
   (cond
    ((null? form) (cons '() acc))
+
+   ;; vector, e.g. {}-initializer
+   ((vector? form)
+    (cons
+     (list->vector
+      (car (walk-sex-tree (vector->list form) (list))))
+     acc))
+
+   ;; atom (hopefully)
    ((not (list? form)) (cons (atom-to-fmt-c form) acc))
 
    ;; special case - replace unquote with its expansion
@@ -73,6 +82,7 @@
    ((and (symbol? (car form))
          (char=? #\. (string-ref (symbol->string (car form)) 0)))
     (cons (make-field-access form) acc))
+
    ;; toplevel, or a start of a regular list form
    (else
     (let ((new-acc (list)))
