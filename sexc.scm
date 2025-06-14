@@ -32,6 +32,7 @@
     ((prototype) '%prototype)
     ((var) '%var)
     ((begin) '%begin)
+    ((define) '%define)
     ((pointer) '%pointer)
     ((array) '%array)
     ((@) 'vector-ref)
@@ -140,7 +141,7 @@
 
 (define (process-form form acc)
   (case (car form)
-    ((chicken-define) (eval form) acc)
+    ((chicken-define) (eval (cons 'define (cdr form))) acc)
     ((template) (eval form) acc)
     ((chicken-load)
      (load (cadr form)) acc)

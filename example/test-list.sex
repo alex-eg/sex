@@ -7,14 +7,16 @@
 
 (chicken-load "list.seh")
 
-(define (imports-test a b c)
+(chicken-define (imports-test a b c)
   (fold + 0 (list 1 2 3 a b c)))
 
 (struct foo
-  ((float a)
+  ((float a-field)
    (int b)
    ((const char *) c)
    ((fn bool ((bool val))) not)))
+
+(var foo f #((= .a-field 1.2)))
 
 ,(list-T '(int))
 ,(make-list-T '(int) #f)
