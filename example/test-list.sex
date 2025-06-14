@@ -3,7 +3,12 @@
 (include stdbool.h)
 (include stdio.h)
 
-(load "list.seh")
+(chicken-import srfi-1 brev-separate)                 ; list routines, e.g. fold
+
+(chicken-load "list.seh")
+
+(define (imports-test a b c)
+  (fold + 0 (list 1 2 3 a b c)))
 
 (struct foo
   ((float a)
@@ -16,9 +21,8 @@
 ,(length-list-T '(int) #f)
 ,(is-empty-list-T '(int) #f)
 
-
 (extern fn void puk ((int a) (float b)))
-(fn bool bar () false)
+(fn int bar () ,(imports-test 10 20 30))
 (pub fn void baz () true)
 
 (extern var int i)

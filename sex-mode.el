@@ -28,7 +28,8 @@ All commands in `lisp-mode-shared-map' are inherited by this map.")
     (list
      ;; Declarations
      (list (concat "("
-                   (regexp-opt '("extern"
+                   (regexp-opt '("chicken-import"
+                                 "extern"
                                  "include"
                                  "fn"
                                  "pub"

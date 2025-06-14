@@ -111,22 +111,27 @@
     (else (error "Pub what?"))))
 
 (define (walk-sex-tree form acc)
-  (case (car form)
-    ((fn) (walk-function form #t acc))
-    ((extern) (walk-extern form acc))
-    ((pub) (walk-public form acc))
-    ((struct union) (walk-struct form acc))
-    ((unquote) (fold (fn (walk-sex-tree x y))
-                     acc
-                     (eval (cadr form))))
+  (if (list? form)
+      (case (car form)
+        ((fn) (walk-function form #t acc))
+        ((extern) (walk-extern form acc))
+        ((pub) (walk-public form acc))
+        ((struct union) (walk-struct form acc))
+        ((unquote) (fold (fn (walk-sex-tree x y))
+                         acc
+                         (eval (cadr form))))
 
-    (else (append (walk-generic form (list)) acc))))
+        (else (append (walk-generic form (list)) acc)))
+      ;; only for unquote support
+      (list (list (atom-to-fmt-c form)))))
 
 (define (process-form form acc)
   (case (car form)
     ((define) (eval form) acc)
     ((template) (eval form) acc)
     ((load) (eval form) acc)
+    ((chicken-import)
+     (eval (cons 'import (cdr form))) acc)
     (else
      (walk-sex-tree form acc))))
 
