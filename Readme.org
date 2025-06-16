@@ -99,16 +99,58 @@ replaced with provided values by the following rules:
 1. If the value is a symbol, all arguments in a body are replaced with
    the value, and also all /parts/ of any other symbol equal to the
    value also get replaced.
-2. If the value is a form, all arguments in a body are replaced with it,
-   but no symbolic substitution is performed.
+2. If the value is a non-symbolic form, all arguments in a body are
+   replaced with it, but no symbolic substitution is performed.
 
 In general, the form of a template declaration is like this:
 #+begin_src
-(template (name (substiture-args ...) other-args ...)
+(template (name (substitute-args ...) other-args ...)
   body ...)
 #+end_src
 
-Exapmle:
+*** Examples:
+**** Structure with templated value type
+#+begin_src
+(template (foo (T))
+  (struct foo-T
+    ((T value))))
+
+,(foo '(float))
+#+end_src
+->
+#+begin_src
+typedef struct foo_float foo_float;
+
+struct foo_float {
+    float value;
+};
+#+end_src
+
+**** Wrapper for checking return codes
+#+begin_src
+(template (check-sdl-return (call message ret-code))
+  (if (< 0 call)
+      (begin
+       (puts message)
+       (return ret-code))))
+
+(fn int init ()
+  ,(check-sdl-return
+    '((SDL-Init SDL-INIT-VIDEO) "Failed to initialize SDL" 1))
+...)
+#+end_src
+->
+#+begin_src
+static int init () {
+    if (0 < SDL_Init(SDL_INIT_VIDEO)) {
+        puts("Failed to initialize SDL");
+        return 1;
+    }
+    return 0;
+}
+#+end_src
+
+**** A bit of everything
 #+begin_src
 (template (list-T (T))
   (struct list-T
@@ -172,4 +214,4 @@ transpilation.
 As Sex is S-expressions, you always have Emacs with paredit as your
 best option.
 
-** COMING SOON: Polymorhpism
+** COMING SOON: Polymorphism
