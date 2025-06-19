@@ -214,4 +214,13 @@ transpilation.
 As Sex is S-expressions, you always have Emacs with paredit as your
 best option.
 
-** COMING SOON: Polymorphism
+*** sex-mode.el
+To harness the power of sex-mode, add the following lines to your
+~$HOME/.config/emacs/init.el~:
+#+begin_src
+(use-package sex-mode
+  :load-path "/path/to/sex"
+  :mode ("\\.sex\\'" "\\.seh\\'"))
+#+end_src
+
+** COMING SOON?: Polymorphism
