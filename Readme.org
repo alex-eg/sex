@@ -90,32 +90,31 @@ struct foo {
 };
 #+end_src
 
-** Templating (and Chickening)
+** Syntactic templates
 Sex has support for template substitutions. Any piece of code can be
-templated. After declaring, templates should be instanced in order to
-be used. To instance template, use ~,~-prefixed form in Sex
-code. During instancing, template arguments in the body get
-replaced with provided values by the following rules:
+templated. Template declarations look like functions: they have a
+name, an argument list and a body. When declared template is
+encountered during reading of Sex code, its body will udergo syntactic
+rewriting using the provided values by the following rules:
 1. If the value is a symbol, all arguments in a body are replaced with
    the value, and also all /parts/ of any other symbol equal to the
    value also get replaced.
 2. If the value is a non-symbolic form, all arguments in a body are
    replaced with it, but no symbolic substitution is performed.
 
-In general, the form of a template declaration is like this:
+Formally, template declaration has the following syntax:
 #+begin_src
-(template (name (substitute-args ...) other-args ...)
-  body ...)
+(template (name . substitute-args) . body)
 #+end_src
 
 *** Examples:
 **** Structure with templated value type
 #+begin_src
-(template (foo (T))
-  (struct foo-T
-    ((T value))))
+(template (foo ?T)
+  (struct foo-?T
+    ((?T value))))
 
-,(foo '(float))
+(foo float)
 #+end_src
 ->
 #+begin_src
@@ -126,17 +125,20 @@ struct foo_float {
 };
 #+end_src
 
+Note that ~?~ at the start of template argument is not syntax, just
+convention.
+
 **** Wrapper for checking return codes
 #+begin_src
-(template (check-sdl-return (call message ret-code))
+(template (check-sdl-return call message ret-code)
   (if (< 0 call)
       (begin
        (puts message)
        (return ret-code))))
 
 (fn int init ()
-  ,(check-sdl-return
-    '((SDL-Init SDL-INIT-VIDEO) "Failed to initialize SDL" 1))
+  (check-sdl-return
+    (SDL-Init SDL-INIT-VIDEO) "Failed to initialize SDL" 1)
 ...)
 #+end_src
 ->
@@ -152,23 +154,23 @@ static int init () {
 
 **** A bit of everything
 #+begin_src
-(template (list-T (T))
-  (struct list-T
-    ((T value)
-     ((* list-T) next))))
+(template (list-T ?T)
+  (struct list-?T
+    ((?T value)
+     ((* list-?T) next))))
 
-(template (list-for-each (what-do type list-var elt-var))
+(template (list-for-each type list-var elt-var body)
   (var type elt-var (-> list-var value))
   (while (!= (-> list-var next) NULL)
-    what-do
+    body
     (= list-var (-> list-var next))
     (= elt-var (-> list-var value))))
 
 ; ... somewhere later
-,(list-T '(int))
+(list-T int)
 
-(pub fn void print-list (const list-int *l)
-     ,(list-for-each '((printf "%d " v) int l v))
+(pub fn void print-list (((const list-int) *l))
+     (list-for-each int l v (printf "%d " v))
      (printf "\n"))
 #+end_src
 Then will be expanded in the following code:
@@ -177,7 +179,7 @@ Then will be expanded in the following code:
 (struct list_int ((int value) ((* list_int) next)))
 (%fun void
       print_list
-      (const list_int *l)
+      (((const list_int) *l))
       (%var int v (-> l value))
       (while (!= (-> l next) NULL)
              (printf "%d " v)
@@ -195,7 +197,7 @@ struct list_int {
     list_int *next;
 };
 
-void print_list (int const, int list_int, int *l) {
+void print_list (const list_int *l) {
     int v = l->value;
     while (l->next != NULL) {
         printf("%d ", v);
@@ -205,10 +207,6 @@ void print_list (int const, int list_int, int *l) {
     printf("\n");
 }
 #+end_src
-
-Also, as a bonus, not only a template can be used after ~,~ in Sex
-source, but in fact any Chicken code you want to run during the
-transpilation.
 
 ** Use an established environment for development
 As Sex is S-expressions, you always have Emacs with paredit as your

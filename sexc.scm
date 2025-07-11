@@ -3,6 +3,7 @@
 
 (import brev-separate
         (chicken pathname)
+        (chicken plist)
         (chicken pretty-print)
         (chicken process-context)
         (chicken string)
@@ -83,6 +84,14 @@
          (char=? #\. (string-ref (symbol->string (car form)) 0)))
     (cons (make-field-access form) acc))
 
+   ;; another special case - template
+   ((template? form)
+    (append (fold
+             walk-generic
+             (list)
+             (eval form))
+            acc))
+
    ;; toplevel, or a start of a regular list form
    (else
     (let ((new-acc (list)))
@@ -134,18 +143,26 @@
      (append (walk-generic (list 'static (cdr form)) (list)) acc))
     (else (error "Pub what?"))))
 
+(define (template? form)
+  (and (list? form)
+       (symbol? (car form))
+       (get (car form) 'sex-template)))
+
 (define (walk-sex-tree form acc)
   (if (list? form)
-      (case (car form)
-        ((fn) (walk-function form #t acc))
-        ((extern) (walk-extern form acc))
-        ((pub) (walk-public form acc))
-        ((struct union) (walk-struct form acc))
-        ((unquote) (fold (fn (walk-sex-tree x y))
-                         acc
-                         (eval (cadr form))))
-
-        (else (append (walk-generic form (list)) acc)))
+      (if (template? form)
+          (fold (fn (walk-sex-tree x y))
+                acc
+                (eval form))
+          (case (car form)
+            ((fn) (walk-function form #t acc))
+            ((extern) (walk-extern form acc))
+            ((pub) (walk-public form acc))
+            ((struct union) (walk-struct form acc))
+            ((unquote) (fold (fn (walk-sex-tree x y))
+                             acc
+                             (eval (cadr form))))
+            (else (append (walk-generic form (list)) acc))))
       ;; only for unquote support
       (list (list (atom-to-fmt-c form)))))
 

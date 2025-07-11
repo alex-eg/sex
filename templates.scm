@@ -1,18 +1,27 @@
 (declare (unit templates))
 
-(import brev-separate
-        fmt
-        regex
-        srfi-1                          ; list routines
-        tree)
+(import
+  (chicken plist)
+  brev-separate
+  fmt
+  regex
+  srfi-1                                ; list routines
+  tree)
+
+(define (register-template name)
+  (put! name 'sex-template #t))
 
 (define-syntax template
   (syntax-rules ()
-    ((_ (name subst-list args ...) body ...)
-     (define (name subst-list-arg args ...)
-       (let* ((subst-alist (map cons 'subst-list subst-list-arg))
-              (replaced-body (apply-substitution `(body ...) subst-alist)))
-         replaced-body)))))
+    ((template (name . args) . body)
+     (begin
+       (register-template 'name)
+       (define-syntax name
+         (syntax-rules ()
+           ((name . applied-args)
+            (let* ((subst-alist (map cons 'args 'applied-args))
+                   (replaced-body (apply-substitution `body subst-alist)))
+              replaced-body))))))))
 
 (define (apply-symbol-substitution sym subst-alist)
   ;; All non-symbol substitutions will be filtered.
@@ -22,7 +31,9 @@
         (subst-map (map (fn
                          (if (symbol? (car x))
                              (cons
-                              (fmt #f "([^\\-]?)" (symbol->string (car x)) "([\\-$]?)")
+                              (fmt #f "([^\\-]?)"
+                                   (regexp-escape (symbol->string (car x)))
+                                   "([\\-$]?)")
                               (fmt #f "\\1" (symbol->string (cdr x)) "\\2"))
                              x))
                         (filter (fn (symbol? (cdr x))) subst-alist))))

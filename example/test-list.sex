@@ -18,11 +18,11 @@
 
 (var foo f #((= .a-field 1.2)))
 
-,(list-T '(int))
-,(make-list-T '(int) #f)
-,(add-value-list-T '(int) #f)
-,(length-list-T '(int) #f)
-,(is-empty-list-T '(int) #f)
+(list-T int)
+(make-list-T int)
+(add-value-list-T int)
+(length-list-T int)
+(is-empty-list-T int)
 
 (extern fn void puk ((int a) (float b)))
 (fn int bar () ,(imports-test 10 20 30))
@@ -38,7 +38,8 @@
      (add-value-list-int l 3)
      (add-value-list-int l 4)
      (printf "Size of the list: %zu\n" (length-list-int l))
-     ,(list-for-each '((printf "%d " v) l v))
+     (list-for-each l v
+       (printf "%d " v))
      (printf "\n")
      (printf "%zu\n" l->next)
      0)
@@ -47,3 +48,22 @@
 (pub fn void clear-command-buffer ((segs-renderer *r)))
 (pub fn void add-render-command ((segs-renderer *r) ((fn void ()) command)))
 (pub fn void commit-command-buffer ((segs-renderer *r)))
+
+(template (list-T ?T)
+  (struct list-?T
+    ((?T value)
+     ((* list-?T) next))))
+
+(template (list-for-each type list-var elt-var body)
+  (var type elt-var (-> list-var value))
+  (while (!= (-> list-var next) NULL)
+    body
+    (= list-var (-> list-var next))
+    (= elt-var (-> list-var value))))
+
+; ... somewhere later
+(list-T int)
+
+(pub fn void print-list (((const list-int) *l))
+     (list-for-each int l v (printf "%d " v))
+     (printf "\n"))
