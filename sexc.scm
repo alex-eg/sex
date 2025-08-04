@@ -248,10 +248,7 @@
   (cdr (assoc '@ args)))
 
 (define (get-c-compiler-args args)
-  (do ((c-args (get-rest-args args) (cdr c-args)))
-      ((or (null? c-args)
-           (char=? #\- (string-ref (car c-args) 0)))
-       c-args)))
+  (filter (fn (string-prefix? "-" x)) args))
 
 (define (get-input-file args)
   (let ((rest-args (get-rest-args args)))
