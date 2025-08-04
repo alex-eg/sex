@@ -8,7 +8,8 @@
 
 (declare (unit fmt-c))
 
-(import fmt)
+(import fmt
+        srfi-13)
 
 (define (fmt-in-macro? st) (fmt-ref st 'in-macro?))
 (define (fmt-macro-params st) (fmt-ref st 'macro-params))
