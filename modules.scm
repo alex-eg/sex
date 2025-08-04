@@ -1,7 +1,6 @@
-(declare (unit sex-modules)             ; you CAN'T have unit named
-                                        ; modules, things start to
-                                        ; break. Probably some
-                                        ; internal chicken name
+; Why `sex-modules`? Probably `modules` unit is reserved by chicken,
+; things start to break.
+(declare (unit sex-modules)
          (uses utils))
 
 (import brev-separate
