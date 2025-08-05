@@ -33,13 +33,13 @@ All commands in `lisp-mode-shared-map' are inherited by this map.")
                                  "chicken-import"
                                  "chicken-load"
                                  "define"
+                                 "defmacro"
                                  "extern"
                                  "import"
                                  "include"
                                  "fn"
                                  "pub"
                                  "struct"
-                                 "template"
                                  "var"
                                  "union")
                                'word)
@@ -78,7 +78,7 @@ All commands in `lisp-mode-shared-map' are inherited by this map.")
 
 (put 'fn 'lisp-indent-function 'defun)
 (put 'pub 'lisp-indent-function 'defun)
-(put 'template 'lisp-indent-function 'defun)
+(put 'defmacro 'lisp-indent-function 'defun)
 (put 'struct 'lisp-indent-function 'defun)
 (put 'var 'lisp-indent-function 0)
 (put 'import 'lisp-indent-function 1)

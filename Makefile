@@ -1,6 +1,6 @@
 CHICKEN_C = csc
 
-MODULES = sexc modules templates utils fmt-c
+MODULES = sexc sex-macros sex-modules utils fmt-c
 OBJ = $(MODULES:%=%.o)
 
 sexc: main.o $(OBJ)
@@ -8,9 +8,6 @@ sexc: main.o $(OBJ)
 
 main.o: main.scm
 	$(CHICKEN_C) $< -c -o $@
-
-templates.o: templates.scm
-	$(CHICKEN_C) $< -c -o $@ -compile-syntax
 
 %.o: %.scm
 	$(CHICKEN_C) $< -e -c -o $@

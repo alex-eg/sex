@@ -1,7 +1,7 @@
 (declare (unit sexc)
-         (uses sex-modules
-               fmt-c
-               templates))
+         (uses fmt-c
+               sex-macros
+               sex-modules))
 
 (include "utils.macros.scm")
 
@@ -54,6 +54,8 @@
    (string->symbol
     (fmt #f (cadr form) (car form)))))
 
+(require-library chicken-syntax)
+
 (define (walk-generic form acc)
   (cond
    ((null? form) (cons '() acc))
@@ -82,12 +84,12 @@
          (char=? #\. (string-ref (symbol->string (car form)) 0)))
     (cons (make-field-access form) acc))
 
-   ;; another special case - template
-   ((template? form)
+   ;; another special case - macro
+   ((macro? form)
     (append (fold-right
              walk-generic
              (list)
-             (eval form))
+             (apply (get-macro (car form)) (cdr form)))
             acc))
 
    ;; toplevel, or a start of a regular list form
@@ -138,22 +140,18 @@
      (walk-function form #f acc))
     ((var)
      (append (walk-generic (list 'static (cdr form)) (list)) acc))
-    ((define import include struct template typedef union var)
+    ((define defmacro import include struct typedef union var)
      ;; ignore here, used in generating public interface
      (process-form (cdr form) acc))
-    (else (error "Pub what?" (cadr form)))))
-
-(define (template? form)
-  (and (list? form)
-       (symbol? (car form))
-       (get (car form) 'sex-template)))
+    (else
+     (error "Pub what?" (cadr form)))))
 
 (define (walk-sex-tree form acc)
   (if (list? form)
-      (if (template? form)
+      (if (macro? form)
           (fold-right (fn (walk-sex-tree x y))
                       acc
-                      (eval form))
+                      (list (apply (get-macro (car form)) (cdr form))))
           (case (car form)
             ((fn) (walk-function form #t acc))
             ((extern) (walk-extern form acc))
@@ -169,7 +167,7 @@
 (define (process-form form acc)
   (case (car form)
     ((chicken-define) (eval (cons 'define (cdr form))) acc)
-    ((template) (eval form) acc)
+    ((defmacro) (defmacro (cdr form)) acc)
     ((chicken-load)
      (load (cadr form)) acc)
     ((chicken-import)

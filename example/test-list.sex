@@ -25,7 +25,7 @@
 (is-empty-list-T int #f)
 
 (extern fn void puk ((int a) (float b)))
-(fn int bar () ,(imports-test 10 20 30))
+(fn int bar () (return ,(imports-test 10 20 30)))
 (pub fn void baz () true)
 
 (extern var int i)
@@ -43,7 +43,7 @@
      (printf "\n")
      (printf "Size of the list: %zu\n" (length-list-int l))
      (printf "%p\n" l->next)
-     0)
+     (return 0))
 
 (pub fn void print-list (((const list-int) *l))
      (list-for-each (const list-int) l int v (printf "%d " v))

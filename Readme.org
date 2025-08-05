@@ -87,124 +87,51 @@ being compiled location, and the second is ~SEX_MODULE_PATH~
 environment variable.
 
 Module's public interface consists of everything declared
-~pub~. Structures, function, templates, types, variables can be
+~pub~. Structures, function, macros, types, variables can be
 public.
 
-** Syntactic templates
-Sex has support for template substitutions. Any piece of code can be
-templated. Template declarations look like functions: they have a
-name, an argument list and a body. When declared template is
-encountered during reading of Sex code, its body will undergo syntactic
-rewriting using the provided values by the following rules:
-1. If the value is a symbol, all arguments in a body are replaced with
-   the value, and also all /parts/ of any other symbol equal to the
-   value also get replaced.
-2. If the value is a non-symbolic form, all arguments in a body are
-   replaced with it, but no symbolic substitution is performed.
-
-Formally, template declaration has the following syntax:
-#+begin_src
-(template (name . substitute-args) . body)
-#+end_src
+** Syntactic macros
+Sex has support for syntactic macros. Macro definitions look like
+functions: they have a name, an argument list and a body. Macro should
+return Sex code.
 
 *** Examples:
 **** Structure with templated value type
 #+begin_src
-(template (foo ?T)
-  (struct foo-?T
-    ((?T value))))
+(pub defmacro (list-T type)
+  (let ((list-type (cat 'list- type)))
+    `(struct ,list-type
+       ((,type value)
+        ((* ,list-type) next)))))
 
-(foo float)
+(list-T int)
 #+end_src
 ->
 #+begin_src
-typedef struct foo_float foo_float;
-
-struct foo_float {
-    float value;
-};
+(struct list_int
+ ((int value)
+  ((* list_int) next)))
 #+end_src
-
-Note that ~?~ at the start of template argument is not syntax, just
-convention.
 
 **** Wrapper for checking return codes
 #+begin_src
-(template (check-sdl-return call message ret-code)
-  (if (< 0 call)
-      (begin
-       (puts message)
-       (return ret-code))))
+(pub defmacro (check-sdl-return call message ret-code)
+  `((if (< 0 ,call)
+        (begin
+         (puts ,message)
+         (return ,ret-code)))))
 
-(fn int init ()
+(pub fn int init ()
   (check-sdl-return
     (SDL-Init SDL-INIT-VIDEO) "Failed to initialize SDL" 1)
 ...)
 #+end_src
 ->
 #+begin_src
-static int init () {
-    if (0 < SDL_Init(SDL_INIT_VIDEO)) {
-        puts("Failed to initialize SDL");
-        return 1;
-    }
-    return 0;
-}
-#+end_src
-
-**** A bit of everything
-#+begin_src
-(template (list-T ?T)
-  (struct list-?T
-    ((?T value)
-     ((* list-?T) next))))
-
-(template (list-for-each type list-var elt-var body)
-  (var type elt-var (-> list-var value))
-  (while (!= (-> list-var next) NULL)
-    body
-    (= list-var (-> list-var next))
-    (= elt-var (-> list-var value))))
-
-; ... somewhere later
-(list-T int)
-
-(pub fn void print-list (((const list-int) *l))
-     (list-for-each int l v (printf "%d " v))
-     (printf "\n"))
-#+end_src
-Then will be expanded in the following code:
-#+begin_src
-(typedef struct list_int list_int)
-(struct list_int ((int value) ((* list_int) next)))
-(%fun void
-      print_list
-      (((const list_int) *l))
-      (%var int v (-> l value))
-      (while (!= (-> l next) NULL)
-             (printf "%d " v)
-             (= l (-> l next))
-             (= v (-> l value)))
-      (printf "\n"))
-#+end_src
-
-And then translated to:
-#+begin_src
-typedef struct list_int list_int;
-
-struct list_int {
-    int value;
-    list_int *next;
-};
-
-void print_list (const list_int *l) {
-    int v = l->value;
-    while (l->next != NULL) {
-        printf("%d ", v);
-        l = l->next;
-        v = l->value;
-    }
-    printf("\n");
+(%fun int init ()
+  (if (< 0 (SDL_Init SDL_INIT_VIDEO))
+    (%begin (puts "Failed to initialize SDL") (return 1)))
+  ...)
 }
 #+end_src
 
@@ -218,7 +145,7 @@ To harness the power of sex-mode, add the following lines to your
 #+begin_src
 (use-package sex-mode
   :load-path "/path/to/sex"
-  :mode ("\\.sex\\'" "\\.seh\\'"))
+  :mode ("\\.sex\\'"))
 #+end_src
 
 ** COMING SOON?: Polymorphism

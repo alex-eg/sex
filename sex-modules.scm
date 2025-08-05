@@ -71,7 +71,7 @@
         ;; fn type name (arg-list) (body)
         ;; 1    2   3       4 - we need first 4
         (cons (take (cdr form) 4) acc))
-       ((define import include struct template typedef union var)
+       ((define defmacro import include struct typedef union var)
         (cons (cdr form) acc))
        (else (error "Pub what? " (cadr form)))))
     (else acc)))
