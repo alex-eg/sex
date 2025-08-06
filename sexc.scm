@@ -40,6 +40,7 @@
     ((define) '%define)
     ((pointer) '%pointer)
     ((array) '%array)
+    ((attribute) '%attribute)
     ((@) 'vector-ref)
     ((include) '%include)
     ((cast) '%cast)
