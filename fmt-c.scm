@@ -562,7 +562,7 @@
            (cat
             (c-in-stmt
              (if (list? body)
-                 (apply c-begin (map c-wrap-stmt (map c-param body)))
+                 (apply c-begin (map c-wrap-stmt (map c-field body)))
                  (c-wrap-stmt (c-expr body))))))
           (if (pair? o) (cat " " (apply c-begin o)) (dsp ""))))
         (c-wrap-stmt
@@ -607,6 +607,22 @@
   (cond
     ((procedure? x) x)
     ((pair? x) (c-type (car x) (cadr x)))
+    (else (cat (lambda (st) ((c-type (fmt-default-type st)) st)) " " x))))
+
+(define (c-field x)
+  (cond
+    ((procedure? x) x)
+    ((pair? x)
+     (if (list? (car x))
+         (case (caar x)
+           ((union struct class)
+            (if (> (length x) 1)
+                (c-type (car x)
+                        (cadr x))
+                (c-type (car x))))
+           (else (c-type (car x) (cadr x))))
+         (c-type (car x)
+                 (fmt-join c-expr (cdr x) ", "))))
     (else (cat (lambda (st) ((c-type (fmt-default-type st)) st)) " " x))))
 
 (define (c-param-list ls)
@@ -655,7 +671,7 @@
                        name))))
         ((enum) (apply c-enum name (cdr type)))
         ((struct union class)
-         (cat (apply c-struct/aux (car type) (cdr type)) " " name))
+         (cat (apply c-struct/aux (car type) (cdr type)) (if name (cat " " name) "")))
         (else (fmt-join/last c-expr (lambda (x) (c-type x name)) type " "))))
      ((not type)
       (lambda (st) ((c-type (or (fmt-default-type st) 'int) name) st)))
