@@ -15,7 +15,6 @@
 (define (fmt-macro-params st) (fmt-ref st 'macro-params))
 (define (fmt-expression? st) (fmt-ref st 'expression?))
 (define (fmt-return? st) (fmt-ref st 'return?))
-(define (fmt-default-type st) (fmt-ref st 'default-type 'int))
 (define (fmt-newline-before-brace? st) (fmt-ref st 'newline-before-brace?))
 (define (fmt-braceless-bodies? st) (fmt-ref st 'braceless-bodies?))
 (define (fmt-non-spaced-ops? st) (fmt-ref st 'non-spaced-ops?))
@@ -608,7 +607,7 @@
   (cond
     ((procedure? x) x)
     ((pair? x) (c-type (car x) (cadr x)))
-    (else (cat (lambda (st) ((c-type (fmt-default-type st)) st)) " " x))))
+    (else (error "missing type" x))))
 
 (define (c-field x)
   (cond
@@ -624,7 +623,7 @@
            (else (c-type (car x) (cadr x))))
          (c-type (car x)
                  (fmt-join c-expr (cdr x) ", "))))
-    (else (cat (lambda (st) ((c-type (fmt-default-type st)) st)) " " x))))
+    (else (error "missing type" x))))
 
 (define (c-param-list ls)
   (c-in-expr (fmt-join/dot c-param (lambda (dot) (dsp "...")) ls ", ")))
