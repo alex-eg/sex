@@ -1,0 +1,55 @@
+name: Sex CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-linux:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install chicken
+      run: |
+        wget -N https://code.call-cc.org/releases/5.4.0/chicken-5.4.0.tar.gz
+        tar zxf chicken-5.4.0.tar.gz
+        sudo apt install -y make
+        make -C chicken-5.4.0 PLATFORM=linux
+        sudo make -C chicken-5.4.0 PLATFORM=linux install
+    - name: Install dependencies
+      # FIXME: [project-local deps]: use venv or something
+      # run: make deps
+      run: sudo chicken-install $(cat dependencies.txt)
+    - name: Make sure that sexc builds
+      # FIXME: sexc being built with local .eggs/ libs needs the path at runtime.
+      # Without it there will be `Error: cannot load extension: fmt`.
+      run: make sexc && ./sexc --help
+    - name: Run tests
+      # FIXME: [project-local deps]: use local deps or build with -static
+      # run: make run-tests
+      run: make sex-tests && ./sex-tests
+
+  build-macos:
+
+    runs-on: macos-15
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install chicken
+      run: brew install chicken make
+    - name: Install dependencies
+      # FIXME: [project-local deps]: use venv or something
+      # run: make deps
+      run: chicken-install $(cat dependencies.txt)
+    - name: Make sure that sexc builds
+      # FIXME: sexc being built with local .eggs/ libs needs the path at runtime.
+      # Without it there will be `Error: cannot load extension: fmt`.
+      run: make sexc && ./sexc --help
+    - name: Run tests
+      # FIXME: [project-local deps]: use local deps or build with -static
+      # run: make run-tests
+      run: make sex-tests && ./sex-tests
