@@ -15,7 +15,6 @@
 (define (fmt-macro-params st) (fmt-ref st 'macro-params))
 (define (fmt-expression? st) (fmt-ref st 'expression?))
 (define (fmt-return? st) (fmt-ref st 'return?))
-(define (fmt-default-type st) (fmt-ref st 'default-type 'int))
 (define (fmt-newline-before-brace? st) (fmt-ref st 'newline-before-brace?))
 (define (fmt-braceless-bodies? st) (fmt-ref st 'braceless-bodies?))
 (define (fmt-non-spaced-ops? st) (fmt-ref st 'non-spaced-ops?))
@@ -27,6 +26,8 @@
 
 (define (c-in-expr proc) (fmt-let 'expression? #t proc))
 (define (c-in-stmt proc) (fmt-let 'expression? #f proc))
+(define (c-reset-newline proc) (fmt-let 'newline-before-brace? #f proc))
+
 (define (c-in-test proc) (fmt-let 'in-cond? #t (c-in-expr proc)))
 (define (c-with-op op proc) (fmt-let 'op op proc))
 
@@ -218,6 +219,7 @@
              ((apply cpp-if/aux (substring/shared (symbol->string (car x)) 1)
                      (cdr x)) st))
             ((%endif) ((apply cpp-endif (cdr x)) st))
+            ((%block-begin) ((apply c-braced-block #f (cdr x)) st))
             ((%block) ((apply c-braced-block (cdr x)) st))
             ((%comment) ((apply c-comment (cdr x)) st))
             ((:) ((apply c-label (cdr x)) st))
@@ -487,8 +489,12 @@
 
 (define (c-open-brace st)
   (if (fmt-newline-before-brace? st)
-      (cat nl (c-current-indent-string st) "{" nl)
-      (cat " {" nl)))
+      (begin
+        (fmt-set! st 'newline-before-brace? #t)
+        (cat "{" nl))
+      (begin
+        (fmt-set! st 'newline-before-brace? #t)
+        (cat " {" nl))))
 
 (define (c-close-brace st)
   (dsp "}"))
@@ -521,7 +527,7 @@
 
 (define (c-braced-block/aux offset header . body)
    (lambda (st)
-     ((cat header (c-open-brace st) (c-indent st offset)
+     ((cat (if header header "") (c-open-brace st) (c-indent st offset)
            (apply c-begin body) fl
            (c-current-indent-string st offset) (c-close-brace st))
       st)))
@@ -590,24 +596,26 @@
 ;; basic control structures
 
 (define (c-while check . body)
-  (cat (c-block (cat "while (" (c-in-test (c-expr check)) ")")
-                (c-in-stmt (apply c-begin body)))
-       fl))
+  (c-reset-newline
+   (cat (c-block (cat "while (" (c-in-test (c-expr check)) ")")
+                 (c-in-stmt (apply c-begin body)))
+        fl)))
 
 (define (c-for init check update . body)
-  (cat
-   (c-block
-    (c-in-expr
-     (cat "for (" (c-expr init) "; " (c-in-test (c-expr check)) "; "
-          (c-expr update ) ")"))
-    (c-in-stmt (apply c-begin body)))
-   fl))
+  (c-reset-newline
+   (cat
+    (c-block
+     (c-in-expr
+      (cat "for (" (c-expr init) "; " (c-in-test (c-expr check)) "; "
+           (c-expr update ) ")"))
+     (c-in-stmt (apply c-begin body)))
+    fl)))
 
 (define (c-param x)
   (cond
     ((procedure? x) x)
     ((pair? x) (c-type (car x) (cadr x)))
-    (else (cat (lambda (st) ((c-type (fmt-default-type st)) st)) " " x))))
+    (else (error "missing type" x))))
 
 (define (c-field x)
   (cond
@@ -623,10 +631,12 @@
            (else (c-type (car x) (cadr x))))
          (c-type (car x)
                  (fmt-join c-expr (cdr x) ", "))))
-    (else (cat (lambda (st) ((c-type (fmt-default-type st)) st)) " " x))))
+    (else (error "missing type" x))))
 
 (define (c-param-list ls)
-  (c-in-expr (fmt-join/dot c-param (lambda (dot) (dsp "...")) ls ", ")))
+  (if (null? ls)
+      (c-type 'void)
+      (c-in-expr (fmt-join/dot c-param (lambda (dot) (dsp "...")) ls ", "))))
 
 (define (c-fun type name params . body)
   (cat (c-block (c-in-expr (c-prototype type name params))

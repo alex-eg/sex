@@ -1,0 +1,25 @@
+(include stdint.h)
+
+(struct vec2
+  ((uint32_t x)
+   (uint32_t y)))
+
+(trait gui
+  (fn void update ((float dt)))
+  (fn void render ())
+  (fn vec2 get-position ())
+  (fn void add-child ((gui *w))))
+
+(struct button
+  ((vector gui) children)
+  ((vec2 pos)))
+
+(impl gui button
+  (fn void update ((float dt))
+    ())
+  (fn void render ()
+    ())
+  (fn vec2 get-position ()
+    (return self->pos))
+  (fn void add-child ((gui *w))
+    (push self->children w)))

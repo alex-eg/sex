@@ -1,0 +1,2 @@
+(pub fn void other-fn ()
+  (begin (while true (begin 1 2 3 4))))

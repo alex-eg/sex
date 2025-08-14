@@ -38,9 +38,10 @@
 
 (pub defmacro (list-for-each list-type list-var elt-type elt-var what-do)
   (let ((list-var-2 (cat list-var '-2)))
-    `((var (pointer ,list-type) ,list-var-2 ,list-var)
-      (var ,elt-type ,elt-var (-> ,list-var-2 value))
-      (while (!= (-> ,list-var-2 next) NULL)
-        ,what-do
-        (= ,list-var-2 (-> ,list-var-2 next))
-        (= ,elt-var (-> ,list-var-2 value))))))
+    `((begin
+       (var (pointer ,list-type) ,list-var-2 ,list-var)
+       (var ,elt-type ,elt-var (-> ,list-var-2 value))
+       (while (!= (-> ,list-var-2 next) NULL)
+         ,what-do
+         (= ,list-var-2 (-> ,list-var-2 next))
+         (= ,elt-var (-> ,list-var-2 value)))))))
