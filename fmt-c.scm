@@ -218,6 +218,7 @@
              ((apply cpp-if/aux (substring/shared (symbol->string (car x)) 1)
                      (cdr x)) st))
             ((%endif) ((apply cpp-endif (cdr x)) st))
+            ((%block-begin) ((apply c-braced-block #f (cdr x)) st))
             ((%block) ((apply c-braced-block (cdr x)) st))
             ((%comment) ((apply c-comment (cdr x)) st))
             ((:) ((apply c-label (cdr x)) st))
@@ -521,7 +522,7 @@
 
 (define (c-braced-block/aux offset header . body)
    (lambda (st)
-     ((cat header (c-open-brace st) (c-indent st offset)
+     ((cat (if header header "") (c-open-brace st) (c-indent st offset)
            (apply c-begin body) fl
            (c-current-indent-string st offset) (c-close-brace st))
       st)))

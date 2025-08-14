@@ -36,7 +36,7 @@
     ((fn) '%fun)
     ((prototype) '%prototype)
     ((var) '%var)
-    ((begin) '%begin)
+    ((begin) '%block-begin)
     ((define) '%define)
     ((pointer) '%pointer)
     ((array) '%array)
