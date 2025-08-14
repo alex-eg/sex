@@ -1,0 +1,8 @@
+# Chicken dependencies
+/.eggs
+/.eggs.lock
+
+# Compilation artifacts
+sexc
+sex-tests
+*.o
