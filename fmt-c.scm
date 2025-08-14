@@ -626,7 +626,9 @@
     (else (error "missing type" x))))
 
 (define (c-param-list ls)
-  (c-in-expr (fmt-join/dot c-param (lambda (dot) (dsp "...")) ls ", ")))
+  (if (null? ls)
+      (c-type 'void)
+      (c-in-expr (fmt-join/dot c-param (lambda (dot) (dsp "...")) ls ", "))))
 
 (define (c-fun type name params . body)
   (cat (c-block (c-in-expr (c-prototype type name params))
