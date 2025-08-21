@@ -13,6 +13,7 @@
         (chicken pretty-print)
         (chicken process)
         (chicken process-context)
+        (chicken port)
         (chicken string)
         fmt
         getopt-long
@@ -286,19 +287,19 @@
                       "cc"))
         (out-file (if (eq? output 'default)
                       "a.out"
-                      output))
-        (temp-c-out (create-temporary-file ".sex.c")))
-    (with-output-to-file temp-c-out
-      (lambda ()
-        (emit-c sex-forms)))
+                      output)))
     (call-with-values
         (lambda ()
-          (process compiler (append (list temp-c-out "-o" out-file "-std=c89" "-pedantic")
+          (process compiler (append (list "-o" out-file "-std=c89" "-pedantic" "-x" "c")
                                     (if (get-arg args 'compile-object #f)
                                         (list "-c")
                                         (list))
+                                    (list "-")  ; read stdin
                                     (get-c-compiler-args args))))
       (lambda (out-port in-port pid)
+        (with-output-to-port in-port
+          (lambda () (emit-c sex-forms)))
+        (close-output-port in-port)
         (process-wait pid)))))
 
 (define (process-input input raw-forms)
