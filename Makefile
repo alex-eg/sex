@@ -12,9 +12,9 @@ main.o: main.scm
 %.o: %.scm
 	$(CHICKEN_C) $< -e -c -o $@
 
-sex-tests: $(OBJ) tests/run.scm
-	$(CHICKEN_C) tests/run.scm -c -o sex-tests.o
-	$(CHICKEN_C) $(OBJ) sex-tests.o -o sex-tests
+sex-tests: $(OBJ) tests/*.scm
+	cd ./tests && $(CHICKEN_C) run.scm -c -o sex-tests.o
+	$(CHICKEN_C) $(OBJ) ./tests/sex-tests.o -o sex-tests
 
 clean:
-	rm -f $(OBJ) sexc sex-tests main.o sex-test.o
+	rm -f $(OBJ) sexc sex-tests main.o ./tests/sex-tests.o
