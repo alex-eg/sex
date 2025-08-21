@@ -26,6 +26,8 @@
 
 (define (c-in-expr proc) (fmt-let 'expression? #t proc))
 (define (c-in-stmt proc) (fmt-let 'expression? #f proc))
+(define (c-reset-newline proc) (fmt-let 'newline-before-brace? #f proc))
+
 (define (c-in-test proc) (fmt-let 'in-cond? #t (c-in-expr proc)))
 (define (c-with-op op proc) (fmt-let 'op op proc))
 
@@ -487,8 +489,12 @@
 
 (define (c-open-brace st)
   (if (fmt-newline-before-brace? st)
-      (cat nl (c-current-indent-string st) "{" nl)
-      (cat " {" nl)))
+      (begin
+        (fmt-set! st 'newline-before-brace? #t)
+        (cat "{" nl))
+      (begin
+        (fmt-set! st 'newline-before-brace? #t)
+        (cat " {" nl))))
 
 (define (c-close-brace st)
   (dsp "}"))
@@ -590,18 +596,20 @@
 ;; basic control structures
 
 (define (c-while check . body)
-  (cat (c-block (cat "while (" (c-in-test (c-expr check)) ")")
-                (c-in-stmt (apply c-begin body)))
-       fl))
+  (c-reset-newline
+   (cat (c-block (cat "while (" (c-in-test (c-expr check)) ")")
+                 (c-in-stmt (apply c-begin body)))
+        fl)))
 
 (define (c-for init check update . body)
-  (cat
-   (c-block
-    (c-in-expr
-     (cat "for (" (c-expr init) "; " (c-in-test (c-expr check)) "; "
-          (c-expr update ) ")"))
-    (c-in-stmt (apply c-begin body)))
-   fl))
+  (c-reset-newline
+   (cat
+    (c-block
+     (c-in-expr
+      (cat "for (" (c-expr init) "; " (c-in-test (c-expr check)) "; "
+           (c-expr update ) ")"))
+     (c-in-stmt (apply c-begin body)))
+    fl)))
 
 (define (c-param x)
   (cond
@@ -761,12 +769,13 @@
   (c-wrap-stmt (cat "goto " (c-expr label))))
 
 (define (c-switch val . clauses)
-  (lambda (st)
-    ((cat "switch (" (c-in-expr val) ")" (c-open-brace st)
-          (c-indent/switch st)
-          (c-in-stmt (apply c-begin/aux #t (map c-switch-clause clauses))) fl
-          (c-current-indent-string st) (c-close-brace st) fl)
-     st)))
+  (c-reset-newline
+   (lambda (st)
+     ((cat "switch (" (c-in-expr val) ")" (c-open-brace st)
+           (c-indent/switch st)
+           (c-in-stmt (apply c-begin/aux #t (map c-switch-clause clauses))) fl
+           (c-current-indent-string st) (c-close-brace st) fl)
+      st))))
 
 (define (c-switch-clause/breaks x)
   (lambda (st)
