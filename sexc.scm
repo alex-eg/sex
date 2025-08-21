@@ -1,7 +1,8 @@
 (declare (unit sexc)
          (uses fmt-c
                sex-macros
-               sex-modules))
+               sex-modules
+               sex-types))
 
 (include "utils.macros.scm")
 
@@ -44,6 +45,10 @@
     ((@) 'vector-ref)
     ((include) '%include)
     ((cast) '%cast)
+    ;; uh things we do for c89 compatibility
+    ((bool) 'int)
+    ((true) 1)
+    ((false) 0)
     (else
      (if (symbol? atom)
          (unkebabify atom)
@@ -288,7 +293,7 @@
         (emit-c sex-forms)))
     (call-with-values
         (lambda ()
-          (process compiler (append (list temp-c-out "-o" out-file)
+          (process compiler (append (list temp-c-out "-o" out-file "-std=c89" "-pedantic")
                                     (if (get-arg args 'compile-object #f)
                                         (list "-c")
                                         (list))

@@ -1,6 +1,5 @@
 (include stdlib.h)
 (include stddef.h)
-(include stdbool.h)
 (include stdio.h)
 
 (chicken-import srfi-1 brev-separate)                 ; list routines, e.g. fold
@@ -16,7 +15,7 @@
    ((const char *) c)
    ((fn bool ((bool val))) not)))
 
-(var foo f #((= .a-field 1.2)))
+(var foo f)
 
 (list-T int)
 (make-list-T int #f)
@@ -26,7 +25,7 @@
 
 (extern fn void puk ((int a) (float b)))
 (fn int bar () (return ,(imports-test 10 20 30)))
-(pub fn void baz () true)
+(pub fn bool baz () (return true))
 
 (extern var int i)
 (var int j)
@@ -34,15 +33,15 @@
 
 (pub fn int main ()
      (var (* list-int) l (make-list-int))
-     (printf "Size of the list: %zu\n" (length-list-int l))
+     (printf "Size of the list: %lu\n" (length-list-int l))
      (add-value-list-int l 3)
      (add-value-list-int l 4)
-     (printf "Size of the list: %zu\n" (length-list-int l))
+     (printf "Size of the list: %lu\n" (length-list-int l))
      (list-for-each list-int l int v
        (printf "%d " v))
      (printf "\n")
-     (printf "Size of the list: %zu\n" (length-list-int l))
-     (printf "%p\n" l->next)
+     (printf "Size of the list: %lu\n" (length-list-int l))
+     (printf "%p\n" (cast void* l->next))
      (return 0))
 
 (pub fn void print-list (((const list-int) *l))
