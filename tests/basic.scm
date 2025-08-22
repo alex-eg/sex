@@ -21,6 +21,11 @@
 (test '%include (atom-to-fmt-c 'include))
 (test '%cast (atom-to-fmt-c 'cast))
 
+;;; c89 stuff
+(test 'int (atom-to-fmt-c 'bool))
+(test 1 (atom-to-fmt-c 'true))
+(test 0 (atom-to-fmt-c 'false))
+
 ;;; make-field-access
 (test 'a.b (make-field-access '(.b a)))
 (test 'a.b.c (make-field-access '(.c a.b)))
