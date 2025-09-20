@@ -35,11 +35,13 @@ All commands in `lisp-mode-shared-map' are inherited by this map.")
                                  "define"
                                  "defmacro"
                                  "extern"
+                                 "impl"
                                  "import"
                                  "include"
                                  "fn"
                                  "pub"
                                  "struct"
+                                 "trait"
                                  "var"
                                  "union")
                                'word)
@@ -57,6 +59,7 @@ All commands in `lisp-mode-shared-map' are inherited by this map.")
                                  "for"
                                  "goto"
                                  "return"
+                                 "self"
                                  "switch"
                                  "var"
                                  "while")
@@ -81,6 +84,8 @@ All commands in `lisp-mode-shared-map' are inherited by this map.")
 (put 'defmacro 'lisp-indent-function 'defun)
 (put 'struct 'lisp-indent-function 'defun)
 (put 'union 'lisp-indent-function 'defun)
+(put 'trait 'lisp-indent-function 'defun)
+(put 'impl 'lisp-indent-function 'defun)
 (put 'var 'lisp-indent-function 0)
 (put 'import 'lisp-indent-function 1)
 

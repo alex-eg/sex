@@ -180,17 +180,27 @@
      (eval (cons 'import (cdr form))) acc)
     ((import)
      (append (process-raw-forms
-
               (import-modules (cdr form)) (list))
              acc))
     (else
      (walk-sex-tree form acc))))
 
 (define (process-raw-forms raw-forms acc)
+  "First processing pass"
   (if (null? raw-forms)
       (reverse acc)
       (process-raw-forms (cdr raw-forms)
                          (process-form (car raw-forms) acc))))
+
+;;; Second pass
+
+(define (process-sex-forms forms)
+  "Second processing pass.
+
+In this pass we do form-rearranging manipulations, like docstring extraction."
+  forms)
+
+;;; Aux functions
 
 (define (read-forms acc)
   (let ((r (read)))
@@ -198,6 +208,7 @@
         (read-forms (cons r acc)))))
 
 (define (emit-c forms)
+  "Final conversion to C"
   (for-each (lambda (form)
               (fmt #t (c-expr form) nl))
             forms))
@@ -338,7 +349,9 @@
                (if (eq? input 'stdin)
                    (read-forms (list))
                    (read-from-file input)))
-              (sex-forms (process-input input raw-forms)))
+              (sex-forms
+               (process-sex-forms
+                (process-input input raw-forms))))
          (if (or (get-arg args 'macro-expand #f)
                  (get-arg args 'preprocess #f))
              ;; Preprocess or macroexpand

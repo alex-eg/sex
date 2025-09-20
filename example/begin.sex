@@ -1,0 +1,8 @@
+(pub fn void other-fn ()
+  (begin (while true (begin 1 2 3 4)))
+  (switch a
+          ((1) (begin
+                (var (const char *) str "121232132")
+                (puts "str")))
+          ((2) (puts "2"))
+          (default (puts "more"))))
