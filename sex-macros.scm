@@ -19,10 +19,16 @@
 (define (get-macro name)
   (eval (get name 'sex-macro)))
 
-(define (macro? form)
+(define (sex-macro? form)
   (and (list? form)
        (symbol? (car form))
        (get (car form) 'sex-macro)))
+
+(define (apply-macro form)
+  (assert (sex-macro? form)
+          (fmt #f (car form) " is not a macro"))
+  (apply (get-macro (car form))
+         (cdr form)))
 
 (define (defmacro form)
   (let ((arglist (car form))

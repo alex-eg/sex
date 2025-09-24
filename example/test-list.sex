@@ -2,12 +2,7 @@
 (include stddef.h)
 (include stdio.h)
 
-(chicken-import srfi-1 brev-separate)                 ; list routines, e.g. fold
-
 (import list)
-
-(chicken-define (imports-test a b c)
-  (fold + 0 (list 1 2 3 a b c)))
 
 (struct foo
   ((float a-field)
@@ -15,7 +10,7 @@
    ((const char *) c)
    ((fn bool ((bool val))) not)))
 
-(var foo f)
+(var (struct foo) f)
 
 (list-T int)
 (make-list-T int #f)
@@ -24,7 +19,6 @@
 (is-empty-list-T int #f)
 
 (extern fn void puk ((int a) (float b)))
-(fn int bar () (return ,(imports-test 10 20 30)))
 (pub fn bool baz () (return true))
 
 (extern var int i)
@@ -32,18 +26,18 @@
 (pub var int k)
 
 (pub fn int main ()
-     (var (* list-int) l (make-list-int))
+     (var (struct list-int) *l (make-list-int))
      (printf "Size of the list: %lu\n" (length-list-int l))
      (add-value-list-int l 3)
      (add-value-list-int l 4)
      (printf "Size of the list: %lu\n" (length-list-int l))
-     (list-for-each list-int l int v
+     (list-for-each (struct list-int) l int v
        (printf "%d " v))
      (printf "\n")
      (printf "Size of the list: %lu\n" (length-list-int l))
      (printf "%p\n" (cast void* l->next))
      (return 0))
 
-(pub fn void print-list (((const list-int) *l))
-     (list-for-each (const list-int) l int v (printf "%d " v))
+(pub fn void print-list (((const struct list-int) *l))
+     (list-for-each (const struct list-int) l int v (printf "%d " v))
      (printf "\n"))

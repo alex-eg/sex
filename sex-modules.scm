@@ -1,7 +1,8 @@
 ; Why `sex-modules`? Probably `modules` unit is reserved by chicken,
 ; things start to break.
 (declare (unit sex-modules)
-         (uses utils))
+         (uses sex-reader
+               utils))
 
 (import brev-separate
         (chicken file)
@@ -14,7 +15,7 @@
 
 (define +persistent-module-paths+ (list))
 
-(define (import-modules module-list)
+(define (get-public-forms module-list)
   ;; Module list is a list of symbols
   ;; How Sex handles modules:
   ;; For each module in a list, construct path, find module by path in
@@ -63,6 +64,7 @@
      (list)
      raw-forms)))
 
+;;; TODO: use semen facilities to analyze modules
 (define (process-public-interface-form form acc)
   (case (car form)
     ((pub)

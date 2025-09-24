@@ -1,0 +1,10 @@
+;;; Prototypes
+(fn void puk ())
+
+(pub fn void plak ())
+
+;;; Functions
+(fn int foo () (return 1))
+
+(pub fn void bar ((int a) (int b))
+  (printf "%d\n" (+ a b)))

@@ -1,4 +1,5 @@
-(declare (uses sexc))
+(declare (uses fmt-c-writer
+               semen))
 
 (import
   (chicken process)
@@ -7,7 +8,7 @@
   test)
 
 (include "basic.scm")
-(include "types.scm")
+(include "semen.scm")
 
 ;;; Should be the last in the test suite
 (test-exit)
