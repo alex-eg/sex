@@ -1,3 +1,5 @@
+(test-begin "basic")
+
 ;;; unkebabify
 (test '- (unkebabify '-))
 (test '-- (unkebabify '--))
@@ -29,3 +31,5 @@
 ;;; make-field-access
 (test 'a.b (make-field-access '(.b a)))
 (test 'a.b.c (make-field-access '(.c a.b)))
+
+(test-end)

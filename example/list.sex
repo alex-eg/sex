@@ -2,10 +2,10 @@
   (let ((list-type (cat 'list- type)))
     `(struct ,list-type
        ((,type value)
-        ((* ,list-type) next)))))
+        ((* (struct ,list-type)) next)))))
 
 (pub defmacro (make-list-T type is-public?)
-  (let ((list-type (cat 'list- type))
+  (let ((list-type (list 'struct (cat 'list- type)))
         (fn-name (cat 'make-list- type)))
     `(,@(if is-public? '(pub) '()) fn (* ,list-type) ,fn-name ()
       (var (* ,list-type) list (cast (* ,list-type) (malloc (sizeof ,list-type))))
@@ -13,7 +13,7 @@
       (return list))))
 
 (pub defmacro (add-value-list-T type is-public?)
-  (let ((list-type (cat 'list- type))
+  (let ((list-type (list 'struct (cat 'list- type)))
         (fn-name (cat 'add-value-list- type)))
     `(,@(if is-public? '(pub) '()) fn void ,fn-name ((,list-type *list) (,type value))
       (while (!= (-> list next) NULL)
@@ -23,7 +23,7 @@
 
 (pub defmacro (length-list-T type is-public?)
   (let ((fn-name (cat 'length-list- type))
-        (list-type (cat 'list- type)))
+        (list-type (list 'struct (cat 'list- type))))
     `(,@(if is-public? '(pub) '()) fn size-t ,fn-name ((,list-type *list))
       (var size-t n 0)
       (while (!= (-> list next) NULL)
@@ -33,15 +33,15 @@
 
 (pub defmacro (is-empty-list-T type is-public?)
   `(,@(if is-public? '(pub) '()) fn bool ,(cat 'is-empty-list- type)
-    ((,(cat 'list- type) *list))
+    ((,(list 'struct (cat 'list- type)) *list))
     (return (== (-> list next) NULL))))
 
 (pub defmacro (list-for-each list-type list-var elt-type elt-var what-do)
   (let ((list-var-2 (cat list-var '-2)))
-    `((begin
-       (var (pointer ,list-type) ,list-var-2 ,list-var)
-       (var ,elt-type ,elt-var (-> ,list-var-2 value))
-       (while (!= (-> ,list-var-2 next) NULL)
-         ,what-do
-         (= ,list-var-2 (-> ,list-var-2 next))
-         (= ,elt-var (-> ,list-var-2 value)))))))
+    `(begin
+      (var (pointer ,list-type) ,list-var-2 ,list-var)
+      (var ,elt-type ,elt-var (-> ,list-var-2 value))
+      (while (!= (-> ,list-var-2 next) NULL)
+        ,what-do
+        (= ,list-var-2 (-> ,list-var-2 next))
+        (= ,elt-var (-> ,list-var-2 value))))))

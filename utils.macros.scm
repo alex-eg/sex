@@ -1,3 +1,5 @@
+(import (chicken process-context))
+
 (define-syntax prog1
   (syntax-rules ()
     ((prog1 form . forms)

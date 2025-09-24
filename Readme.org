@@ -12,7 +12,7 @@ to export ~CHICKEN_INSTALL_REPOSITORY~ and ~CHICKEN_REPOSITORY_PATH~
 environment variables. Refer to the documentation for more info:
 https://wiki.call-cc.org/man/5/Extension%20tools#changing-the-repository-location
 
-~chicken-install fmt getopt-long brev-separate test tree srfi-1 srfi-13~
+~chicken-install fmt getopt-long brev-separate test tree srfi-1 srfi-13 srfi-69 matchable~
 
 ** Compilation
 ~make~
