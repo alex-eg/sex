@@ -1,6 +1,6 @@
 CHICKEN_C = csc
 
-MODULES = sexc sex-macros sex-modules utils fmt-c
+MODULES = sexc fmt-c fmt-c-writer semen sex-macros sex-modules sex-reader utils
 OBJ = $(MODULES:%=%.o)
 
 sexc: main.o $(OBJ)

@@ -1,206 +1,22 @@
 (declare (unit sexc)
-         (uses fmt-c
-               sex-macros
-               sex-modules))
+         (uses fmt-c-writer
+               sex-reader
+               semen))
 
 (include "utils.macros.scm")
 
 (import brev-separate
         (chicken file)
-        (chicken pathname)
         (chicken plist)
         (chicken pretty-print)
         (chicken process)
         (chicken process-context)
         (chicken port)
-        (chicken string)
         fmt
         getopt-long
-        regex
         srfi-1                          ; list routines
-        srfi-13                         ; string routines
+        srfi-13
         tree)
-
-(define (unkebabify sym)
-  (case sym
-    ((-) sym)
-    ((--) sym)
-    ((->) sym)
-    ((-=) sym)
-    (else
-     (string->symbol
-      (string-substitute "-(?!>)" "_"
-                         (symbol->string sym) #t)))))
-
-(define (atom-to-fmt-c atom)
-  (case atom
-    ((fn) '%fun)
-    ((prototype) '%prototype)
-    ((var) '%var)
-    ((begin) '%block-begin)
-    ((define) '%define)
-    ((pointer) '%pointer)
-    ((array) '%array)
-    ((attribute) '%attribute)
-    ((@) 'vector-ref)
-    ((include) '%include)
-    ((cast) '%cast)
-    ;; uh things we do for c89 compatibility
-    ((bool) 'int)
-    ((true) 1)
-    ((false) 0)
-    (else
-     (if (symbol? atom)
-         (unkebabify atom)
-         atom))))
-
-(define (make-field-access form)
-  (assert (= 2 (length form)) "Wrong field access format")
-  (unkebabify
-   (string->symbol
-    (fmt #f (cadr form) (car form)))))
-
-(require-library chicken-syntax)
-
-(define (walk-generic form acc)
-  (cond
-   ((null? form) (cons '() acc))
-
-   ;; vector, e.g. {}-initializer
-   ((vector? form)
-    (cons
-     (list->vector
-      (car (walk-sex-tree (vector->list form) (list))))
-     acc))
-
-   ;; atom (hopefully)
-   ((not (list? form)) (cons (atom-to-fmt-c form) acc))
-
-   ;; special case - replace unquote with its expansion
-   ((eq? (car form) 'unquote)
-    (fold
-     cons
-     acc
-     (car                               ; bc walk-sex-tree always
-                                        ; wraps its result
-      (walk-sex-tree (eval (cadr form)) (list)))))
-
-   ;; another special case - field access
-   ((and (symbol? (car form))
-         (char=? #\. (string-ref (symbol->string (car form)) 0)))
-    (cons (make-field-access form) acc))
-
-   ;; another special case - macro
-   ((macro? form)
-    (append (fold-right
-             walk-generic
-             (list)
-             (apply (get-macro (car form)) (cdr form)))
-            acc))
-
-   ;; toplevel, or a start of a regular list form
-   (else
-    (let ((new-acc (list)))
-      (cons (fold-right
-             walk-generic
-             new-acc
-             form)
-            acc)))))
-
-(define (normalize-fn-form form)
-  ;; (fn ret-type name arglist body) -> normal function
-  ;; (fn ret-type name arglist) -> prototype
-  (if (>= (length form) 5)
-      form
-      (cons 'prototype (cdr form))))
-
-(define (walk-function form static acc)
-  (if static
-      (append (walk-generic (list 'static (normalize-fn-form form))
-                            (list))
-              acc)
-      (append (walk-generic (normalize-fn-form (cdr form))
-                            (list))
-              acc)))
-
-(define (walk-struct form acc)
-  (let ((name (unkebabify (cadr form))))
-    (append (walk-generic form (list))
-          (cons `(typedef struct ,name ,name) acc))))
-
-(define (walk-extern form acc)
-  (case (cadr form)
-    ((fn)
-     (append
-      (list (cons 'extern (walk-function form #f (list))))
-      acc))
-    ((var)
-     (append
-      (list (cons 'extern (walk-generic (cdr form) (list))))
-      acc))
-    (else (error "Extern what?"))))
-
-(define (walk-public form acc)
-  (case (cadr form)
-    ((fn)
-     (walk-function form #f acc))
-    ((var)
-     (append (walk-generic (list 'static (cdr form)) (list)) acc))
-    ((define defmacro import include struct typedef union var)
-     ;; ignore here, used in generating public interface
-     (process-form (cdr form) acc))
-    (else
-     (error "Pub what?" (cadr form)))))
-
-(define (walk-sex-tree form acc)
-  (if (list? form)
-      (if (macro? form)
-          (fold-right (fn (walk-sex-tree x y))
-                      acc
-                      (list (apply (get-macro (car form)) (cdr form))))
-          (case (car form)
-            ((fn) (walk-function form #t acc))
-            ((extern) (walk-extern form acc))
-            ((pub) (walk-public form acc))
-            ((struct union) (walk-struct form acc))
-            ((unquote) (fold (fn (walk-sex-tree x y))
-                             acc
-                             (eval (cadr form))))
-            (else (append (walk-generic form (list)) acc))))
-      ;; only for unquote support
-      (list (list (atom-to-fmt-c form)))))
-
-(define (process-form form acc)
-  (case (car form)
-    ((chicken-define) (eval (cons 'define (cdr form))) acc)
-    ((defmacro) (defmacro (cdr form)) acc)
-    ((chicken-load)
-     (load (cadr form)) acc)
-    ((chicken-import)
-     (eval (cons 'import (cdr form))) acc)
-    ((import)
-     (append (process-raw-forms
-
-              (import-modules (cdr form)) (list))
-             acc))
-    (else
-     (walk-sex-tree form acc))))
-
-(define (process-raw-forms raw-forms acc)
-  (if (null? raw-forms)
-      (reverse acc)
-      (process-raw-forms (cdr raw-forms)
-                         (process-form (car raw-forms) acc))))
-
-(define (read-forms acc)
-  (let ((r (read)))
-    (if (eof-object? r) (reverse acc)
-        (read-forms (cons r acc)))))
-
-(define (emit-c forms)
-  (for-each (lambda (form)
-              (fmt #t (c-expr form) nl))
-            forms))
 
 ;;; Main function facilities
 
@@ -214,10 +30,10 @@
                       (required #f)
                       (value #f)
                       (single-char #\c))
-      (preprocess "Emit C code"
+      (emit-c "Emit C code"
                   (required #f)
                   (value #f)
-                  (single-char #\E))
+                  (single-char #\C))
       (public-interface "Get module's public interface"
                         (required #f)
                         (value #f))
@@ -261,20 +77,14 @@
         'stdin
         (car rest-args))))
 
-(define (read-from-file file)
-  (with-directory file
-   (with-input-from-file (pathname-strip-directory file)
-     (fn (read-forms (list))))))
-
 (define (write-to-file-or-stdout output what)
   (if (eq? output 'default)
       (what)
       (with-output-to-file output
         (fn (what)))))
 
-(define (preprocess-or-macroexpand sex-forms output args)
-  (write-to-file-or-stdout
-   output
+(define (emit-c-or-sex sex-forms output args)
+  (write-to-file-or-stdout output
    (lambda ()
     (if (get-arg args 'macro-expand #f)
         (map pp sex-forms)
@@ -301,13 +111,11 @@
         (close-output-port in-port)
         (process-wait pid)))))
 
-(define (process-input input raw-forms)
-  (let ((current-dir (current-directory)))
-    (unless (eq? input 'stdin)
-      (set-working-directory input))
-    (prog1
-     (process-raw-forms raw-forms (list))
-     (change-directory current-dir))))
+(define (semantic-process-forms raw-forms input-source)
+  (if (eq? input-source 'stdin)
+      (semen-process raw-forms)
+      (with-directory input-source
+        (semen-process raw-forms))))
 
 (define (main)
   (let* ((raw-args (command-line-arguments))
@@ -334,14 +142,11 @@
          (return #f))
        (load-persistent-module-paths)
 
-       (let* ((raw-forms
-               (if (eq? input 'stdin)
-                   (read-forms (list))
-                   (read-from-file input)))
-              (sex-forms (process-input input raw-forms)))
+       (let* ((raw-forms (read-raw-forms input))
+              (sex-forms (semantic-process-forms raw-forms input)))
          (if (or (get-arg args 'macro-expand #f)
-                 (get-arg args 'preprocess #f))
-             ;; Preprocess or macroexpand
-             (preprocess-or-macroexpand sex-forms output args)
+                 (get-arg args 'emit-c #f))
+             ;; Emit processed and macro-expanded sex code, or emit C code
+             (emit-c-or-sex sex-forms output args)
              ;; Compile file!
              (compile-to-file sex-forms output args)))))))
