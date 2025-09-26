@@ -79,6 +79,15 @@
                                 (cons (car module-public-forms)
                                       acc))))))
 
+(define (semen-macro-expand form)
+  "Walk the form recursively and expand all macros, unitl none is left."
+  (semen-walk-form
+   form
+   (lambda (subform)
+     (if (sex-macro? subform)
+         (apply-macro subform)
+         subform))))
+
 ;;; TODO: for greater inspiration, see SBCL's walk.lisp
 (define (semen-walk-form form walk-fn)
   (if (atom? form) form
@@ -97,7 +106,8 @@
       (cons new-car new-cdr)))
 
 (define (process-fn sex-fn acc)
-  (cons sex-fn acc))
+  (let ((expanded (semen-macro-expand sex-fn)))
+    (cons expanded acc)))
 
 (define (process-struct sex-struct acc)
   (cons sex-struct acc))
