@@ -79,6 +79,23 @@
                                 (cons (car module-public-forms)
                                       acc))))))
 
+;;; TODO: for greater inspiration, see SBCL's walk.lisp
+(define (semen-walk-form form walk-fn)
+  (if (atom? form) form
+      (let ((new-form (walk-fn form)))
+        (cond ((not (eq? form new-form))
+               (semen-walk-form new-form walk-fn))
+              (else (recons
+                     new-form
+                     (semen-walk-form (car new-form) walk-fn)
+                     (semen-walk-form (cdr new-form) walk-fn)))))))
+
+(define (recons old-cons new-car new-cdr)
+  (if (and (eq? new-car (car old-cons))
+           (eq? new-cdr (cdr old-cons)))
+      old-cons
+      (cons new-car new-cdr)))
+
 (define (process-fn sex-fn acc)
   (cons sex-fn acc))
 
