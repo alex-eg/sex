@@ -99,7 +99,7 @@
                       output)))
     (call-with-values
         (lambda ()
-          (process compiler (append (list "-o" out-file "-std=c89" "-pedantic" "-x" "c")
+          (process compiler (append (list "-o" out-file "-x" "c")
                                     (if (get-arg args 'compile-object #f)
                                         (list "-c")
                                         (list))
