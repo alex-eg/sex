@@ -4,10 +4,13 @@
          (uses sex-macros
                sex-modules))
 
-(import fmt
-        matchable                       ; pattern matching
-        srfi-1                          ; list routines
-        )
+(import
+  (chicken string)
+  fmt
+  matchable                             ; pattern matching
+  srfi-1                                ; list routines
+  srfi-69                               ; hash tables
+  )
 
 ;;; for lambda extraction, docstring processing, macro expansion,
 ;;; injection of module headers, i.e. all things that rearrange code
@@ -83,21 +86,24 @@
   "Walk the form recursively and expand all macros, until none is left."
   (semen-walk-form
    form
-   (lambda (subform)
+   (lambda (subform env)
      (if (sex-macro? subform)
          (apply-macro subform)
-         subform))))
+         subform))
+   #f))
 
-;;; TODO: for greater inspiration, see SBCL's walk.lisp
-(define (semen-walk-form form walk-fn)
+;;; TODO: for greater inspiration, see SBCL's walk.lisp and their
+;;; template system. Maybe it is worth it to implement something
+;;; similar here
+(define (semen-walk-form form walk-fn env)
   (if (atom? form) form
-      (let ((new-form (walk-fn form)))
+      (let ((new-form (walk-fn form env)))
         (cond ((not (eq? form new-form))
-               (semen-walk-form new-form walk-fn))
+               (semen-walk-form new-form walk-fn env))
               (else (recons
                      new-form
-                     (semen-walk-form (car new-form) walk-fn)
-                     (semen-walk-form (cdr new-form) walk-fn)))))))
+                     (semen-walk-form (car new-form) walk-fn env)
+                     (semen-walk-form (cdr new-form) walk-fn env)))))))
 
 (define (recons old-cons new-car new-cdr)
   (if (and (eq? new-car (car old-cons))
@@ -105,9 +111,49 @@
       old-cons
       (cons new-car new-cdr)))
 
+;;; Fn processing
+
 (define (process-fn sex-fn acc)
-  (let ((expanded (semen-macro-expand sex-fn)))
-    (cons expanded acc)))
+  (let* ((expanded (semen-macro-expand sex-fn))
+         (env (make-hash-table))
+         (processed
+          (semen-walk-form
+           expanded
+           semen-fn-walker
+           (begin
+             (set! (hash-table-ref env :fn-name) (sex-fn-name expanded))
+             (set! (hash-table-ref env :lambda-counter) 0)
+             (set! (hash-table-ref env :lambda-aux-code) (list))
+             env))))
+
+    (cons processed
+          (append (hash-table-ref env :lambda-aux-code) acc))))
+
+(define (semen-fn-walker form env)
+  (if (eq? 'lambda (car form))
+      (let ((lambda-name (semen-make-lambda-name (hash-table-ref env :fn-name)
+                                                 (hash-table-ref env :lambda-counter))))
+        (set! (hash-table-ref env :lambda-aux-code)
+          (cons (semen-make-aux-lambda-struct lambda-name form)
+                (hash-table-ref env :lambda-aux-code)))
+        (set! (hash-table-ref env :lambda-counter)
+          (+ (hash-table-ref env :lambda-counter) 1))
+        lambda-name)
+    form))
+
+(define (semen-make-lambda-name enclosing-fn-name counter)
+  (string->symbol
+   (fmt #f "__lambda_" counter "_" enclosing-fn-name)))
+
+(define (semen-make-aux-lambda-struct name form)
+  (match form
+    (('lambda ret-type arglist captures . body)
+     ;; Captures are ignored for now, but
+     ;; we'll need them for TODO: closures support
+     `(fn ,ret-type ,name ,arglist ,@body))
+    (else (assert #f (fmt #f "Malformed lambda " form)))))
+
+;;; Struct
 
 (define (process-struct sex-struct acc)
   (cons sex-struct acc))

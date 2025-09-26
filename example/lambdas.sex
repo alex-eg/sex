@@ -1,0 +1,31 @@
+(include stdio.h)
+
+(fn int sum ((int a) (int b))
+  (return (+ a b)))
+
+(pub fn int main ()
+  (var int a 10)
+  (var int b 20)
+  (var (fn int ((int) (int))) sum-fn sum)
+
+  (var (fn int ((int) (int))) sum-lambda
+
+       (lambda int ((int a) (int b)) ()
+         (return (+ a b))))
+
+  (var (fn int ((int))) sum-lambda-2
+
+       (lambda int ((int a)) ()
+         (return (+ a 20))))
+
+  (printf "Hello from main fn!\n")
+  (printf "We will now perform some function calling.\n")
+
+  (printf "Calling fn ptr: %d\n" (sum-fn a b))
+  (printf "Calling lambda: %d\n" (sum-lambda a b))
+  (printf "Calling other lambda: %d\n" (sum-lambda-2 a))
+  (printf "Calling lambda inplace: %d\n" ((lambda int ((int a) (int b)) ()
+                                            (return (+ a b 100)))
+                                          a b))
+
+  (return 0))
