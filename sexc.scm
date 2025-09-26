@@ -41,7 +41,7 @@
             (required #f)
             (value #f)
             (single-char #\h))
-      (macro-expand "Emit macro-expanded Sex code"
+      (macro-expand "Emit macro-expanded semantically processed Sex code"
                     (required #f)
                     (value #f)
                     (single-char #\m))

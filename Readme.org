@@ -1,6 +1,7 @@
 * The Sex language
 Sex is a S-expressions language. Sex is written in Chicken, which is a
 [[https://call-cc.org][R5RS Scheme]].
+Sex is statically typed, compiled general purpose language.
 
 * Compilation
 First, get yourself a Chicken, then, some Chicken deps. You also will
@@ -25,10 +26,11 @@ Options:
  --c-compiler=ARG         Select C compiler. Defaults to value of SEX_CC
                           environment variable, or if it is empty, to cc
  -c, --compile-object     Compile object file instead of executable program
- -E, --preprocess         Emit C code
+ -C, --preprocess         Emit C code
  --public-interface       Get module's public interface
  -h, --help               Show this help
- -m, --macro-expand       Emit macro-expanded Sex code
+ -m, --macro-expand       Emit macro-expanded semantically processed Sex code
+                          (sort of IR). May be useful for debugging
  -o, --output=ARG         Write output to file. Default file name is a.out.
                           If -E or -m options are provided, defaults to stdout
 #+end_src
@@ -71,9 +73,9 @@ Hello, Alex!
 Just ~(include "Your/Favourite/Library.h")~ and use it as you would
 have is C.
 
-** Auto unkebabification
+*** Auto kebabification
 For hardcore fans of traditional Lisp naming convention,
-Sex offers automatic unkebabification of all symbols, i.e. no more
+Sex offers automatic kebabification of all symbols, i.e. no more
 ugly ~GL_ARRAY_BUFFER~ s in your code, they may be written in their
 proper form: ~GL-ARRAY-BUFFER~.
 
@@ -114,8 +116,8 @@ return Sex code.
 **** Wrapper for checking return codes
 #+begin_src scheme
 (pub defmacro (check-sdl-return call message ret-code)
-  `((if (< 0 ,call)
-        (begin
+  `(if (< 0 ,call)
+       (begin
          (puts ,message)
          (return ,ret-code)))))
 
