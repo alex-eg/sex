@@ -1,3 +1,7 @@
+# Project-local Chicken egg repository
+/.eggs
+
+# Compilation artifacts
 *.o
 *.import.scm
 *.link
