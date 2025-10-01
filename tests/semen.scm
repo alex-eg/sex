@@ -1,3 +1,5 @@
+(import srfi-69)
+
 (define print-str-fn
   '(fn void print-str ((string s))
        (printf "%s" s)))
@@ -33,8 +35,11 @@
 
 ;;; Macro expansion
 
-(test 'a (semen-walk-form 'a identity))
-(test '(a b c) (semen-walk-form '(a b c) identity))
+(define (form-identity form env)
+  form)
+
+(test 'a (semen-walk-form 'a form-identity (make-hash-table)))
+(test '(a b c) (semen-walk-form '(a b c) form-identity (make-hash-table)))
 
 (test 'a (semen-macro-expand 'a))
 (test '(a b c) (semen-macro-expand '(a b c)))
