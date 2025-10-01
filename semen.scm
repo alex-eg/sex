@@ -134,8 +134,8 @@
       (let ((lambda-name (semen-make-lambda-name (hash-table-ref env :fn-name)
                                                  (hash-table-ref env :lambda-counter))))
         (set! (hash-table-ref env :lambda-aux-code)
-          (cons (semen-make-aux-lambda-struct lambda-name form)
-                (hash-table-ref env :lambda-aux-code)))
+          (append (semen-make-aux-lambda-struct lambda-name form)
+                  (hash-table-ref env :lambda-aux-code)))
         (set! (hash-table-ref env :lambda-counter)
           (+ (hash-table-ref env :lambda-counter) 1))
         lambda-name)
@@ -150,7 +150,7 @@
     (('lambda ret-type arglist captures . body)
      ;; Captures are ignored for now, but
      ;; we'll need them for TODO: closures support
-     `(fn ,ret-type ,name ,arglist ,@body))
+     (process-fn `(fn ,ret-type ,name ,arglist ,@body) (list)))
     (else (assert #f (fmt #f "Malformed lambda " form)))))
 
 ;;; Struct
