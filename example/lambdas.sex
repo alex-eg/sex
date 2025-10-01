@@ -28,4 +28,11 @@
                                             (return (+ a b 100)))
                                           a b))
 
+  (var (fn int ((int))) l-1
+       (lambda int ((int a)) ()
+         (var (fn int ((int))) l-2
+              (lambda int ((int a)) ()
+                (return (+ 60 a))))
+         (return (+ 600 (l-2 a)))))
+  (printf "Calling nested lambdas: %d\n" (l-1 6))
   (return 0))
