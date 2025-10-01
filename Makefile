@@ -1,4 +1,6 @@
-CHICKEN_C = csc
+CHICKEN_C ?= csc
+CHICKEN_INSTALL ?= chicken-install
+CHICKEN_STATUS ?= chicken-status
 CSC_FLAGS += -K prefix -static
 # What and why:
 # -emit-all-import-libraries: Emit import-libraries for all defined modules.
@@ -18,10 +20,28 @@ MODULE_FLAGS = -emit-all-import-libraries -module-registration -c
 MODULES = utils types sex-macros reader sex-modules semen sex-fmt-c fmt-c-writer sexc
 OBJ = $(MODULES:%=%.o)
 
-sexc: $(OBJ) main.scm
+DEPSFILE = dependencies.txt
+DEPSLOCK = eggs.lock
+EGGS_DIR := $(abspath .eggs)
+
+# Compiler's own repository (types.db, chicken.*), ignoring ambient venv vars.
+SYSTEM_CHICKEN_REPO := $(shell env -u CHICKEN_INSTALL_REPOSITORY -u CHICKEN_REPOSITORY_PATH -u CHICKEN_EGG_CACHE -u CHICKEN_INSTALL_PREFIX $(CHICKEN_INSTALL) -repository 2>/dev/null)
+CHICKEN_ABI := $(notdir $(SYSTEM_CHICKEN_REPO))
+EGGS_STAMP := $(EGGS_DIR)/.installed-$(CHICKEN_ABI)
+
+export CHICKEN_EGG_CACHE := $(EGGS_DIR)/cache
+export CHICKEN_INSTALL_REPOSITORY := $(EGGS_DIR)
+export CHICKEN_INSTALL_PREFIX := $(EGGS_DIR)
+export CHICKEN_REPOSITORY_PATH := $(EGGS_DIR):$(SYSTEM_CHICKEN_REPO)
+
+all: sexc
+
+sexc: $(EGGS_STAMP) $(OBJ) main.scm
 	$(CHICKEN_C) $(CSC_FLAGS) main.scm -o sexc-tmp -link sexc
         # otherwise csc hangs, probably because it tries to compile to sexc.o first
 	mv sexc-tmp sexc
+
+$(OBJ): $(EGGS_STAMP)
 
 #------------------------------------------------------------------
 
@@ -53,11 +73,11 @@ sexc.o: sexc.module.scm types.o sexc.scm fmt-c-writer.o sex-macros.o sex-modules
 	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) sexc.module.scm -o sexc.o -unit sexc -link fmt-c-writer,sex-macros,sex-modules,reader,semen,types,utils
 
 # Unit testing
-sex-tests:
+sex-tests: $(EGGS_STAMP)
 	$(MAKE) -C ./tests sex-tests
 	cp ./tests/sex-tests ./
 
-sextest:
+sextest: $(EGGS_STAMP)
 	$(MAKE) -C ./tools/sextest sextest
 	cp ./tools/sextest/sextest .
 
@@ -74,6 +94,36 @@ check-exit-code: sexc
 run-tests: sexc sex-tests sextest
 	./sex-tests && ./sextest --sexc=./sexc $(SEX_TEST_PROGRAMS:%=./tests/sex-programs/%.sex) && $(MAKE) check-modules && $(MAKE) check-exit-code
 
+install: all installdirs
+	$(INSTALL_PROGRAM) sexc $(DESTDIR)$(bindir)/sexc
+
+install-strip:
+	$(MAKE) INSTALL_PROGRAM='$(INSTALL_PROGRAM) -s' install
+
+installdirs:
+	$(INSTALL) -d $(DESTDIR)$(bindir)
+
+uninstall:
+	rm -f $(DESTDIR)$(bindir)/sexc
+
+# eggs.lock is the pin file (chicken-status -list). Install from it;
+# do not float versions on a normal build. Regenerating the lock:
+#   make deps-update
+$(EGGS_STAMP): $(DEPSLOCK)
+	mkdir -p $(CHICKEN_EGG_CACHE)
+	$(CHICKEN_INSTALL) -force -from-list $(DEPSLOCK)
+	touch $@
+
+deps: $(EGGS_STAMP)
+
+deps-update: $(DEPSFILE)
+	rm -rf $(EGGS_DIR)
+	mkdir -p $(CHICKEN_EGG_CACHE)
+	$(CHICKEN_INSTALL) -force $$(cat $(DEPSFILE))
+	CHICKEN_REPOSITORY_PATH=$(EGGS_DIR) $(CHICKEN_STATUS) -list | sort > $(DEPSLOCK).tmp
+	mv $(DEPSLOCK).tmp $(DEPSLOCK)
+	touch $(EGGS_STAMP)
+
 clean:
 	rm -f $(OBJ) main.o
 	rm -f *.import.scm
@@ -81,4 +131,4 @@ clean:
 	rm -f sexc sex-tests sextest
 	$(MAKE) -C ./tests/modules clean
 
-.PHONY: clean run-tests sex-tests sextest check-modules check-exit-code
+.PHONY: clean depclean deps run-tests sex-tests sextest check-modules check-exit-code
