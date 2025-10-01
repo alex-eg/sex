@@ -1,5 +1,5 @@
 CHICKEN_C = csc
-CSC_FLAGS = -K prefix
+CSC_FLAGS += -K prefix
 
 MODULES = sexc fmt-c fmt-c-writer semen sex-macros sex-modules sex-reader utils
 OBJ = $(MODULES:%=%.o)
