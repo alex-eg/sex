@@ -119,7 +119,7 @@ return Sex code.
   `(if (< 0 ,call)
        (begin
          (puts ,message)
-         (return ,ret-code)))))
+         (return ,ret-code))))
 
 (pub fn int init ()
   (check-sdl-return
