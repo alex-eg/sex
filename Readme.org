@@ -2,7 +2,7 @@
 
 #+NAME: the Sex logo
 #+ATTR_HTML: :width 300px
-[[./sex.png]]
+[[sex.png][file:./sex.png]]
 
 Sex is a S-expressions language. Sex is written in Chicken, which is a
 [[https://call-cc.org][R5RS Scheme]].
