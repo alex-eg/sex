@@ -1,21 +1,21 @@
 (include stdio.h)
 
-(fn int sum ((int a) (int b))
+(fn sum ((a int) (b int)) int
   (return (+ a b)))
 
-(pub fn int main ()
-  (var int a 10)
-  (var int b 20)
-  (var (fn int ((int) (int))) sum-fn sum)
+(pub fn main () int
+  (var a int 10)
+  (var b int 20)
+  (var (fn ((int) (int)) int) sum-fn sum)
 
-  (var (fn int ((int) (int))) sum-lambda
+  (var (fn ((int) (int)) int) sum-lambda
 
-       (lambda int ((int a) (int b)) ()
+       (lambda ((a int) (b int)) int ()
          (return (+ a b))))
 
-  (var (fn int ((int))) sum-lambda-2
+  (var (fn ((int)) int) sum-lambda-2
 
-       (lambda int ((int a)) ()
+       (lambda ((a int)) int ()
          (return (+ a 20))))
 
   (printf "Hello from main fn!\n")
@@ -24,15 +24,28 @@
   (printf "Calling fn ptr: %d\n" (sum-fn a b))
   (printf "Calling lambda: %d\n" (sum-lambda a b))
   (printf "Calling other lambda: %d\n" (sum-lambda-2 a))
-  (printf "Calling lambda inplace: %d\n" ((lambda int ((int a) (int b)) ()
+  (printf "Calling lambda inplace: %d\n" ((lambda ((a int) (b int)) int ()
                                             (return (+ a b 100)))
                                           a b))
 
-  (var (fn int ((int))) l-1
-       (lambda int ((int a)) ()
-         (var (fn int ((int))) l-2
-              (lambda int ((int a)) ()
+  (var (fn ((int)) int) l-1
+       (lambda ((a int)) int ()
+         (var (fn ((int)) int) l-2
+              (lambda ((a int)) int ()
                 (return (+ 60 a))))
          (return (+ 600 (l-2 a)))))
   (printf "Calling nested lambdas: %d\n" (l-1 6))
+
+  ;; Not supported yet
+  ;; Closure
+  ;;  (var (fn (fn ((int)) int) ((int))) make-adder
+  ;;       (lambda (fn int ((int a))) ()
+  ;;         (return (lambda int ((int b)) (a)
+  ;;                   (return (+ a b))))))
+  ;;
+  ;;  (var (fn int ((int))) add-10
+  ;;       (make-adder 10))
+  ;;  (var (fn int ((int))) add-20
+  ;;       (make-adder 20))
+  ;;  (printf "Calling closures: %d\n" (add-10 24))
   (return 0))

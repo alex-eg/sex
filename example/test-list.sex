@@ -5,12 +5,12 @@
 (import list)
 
 (struct foo
-  ((float a-field)
-   (int b)
-   ((const char *) c)
-   ((fn bool ((bool val))) not)))
+  ((a-field float)
+   (b int)
+   (c (* const char))
+   (not (fn ((val bool)) bool))))
 
-(var (struct foo) f)
+(var f (struct foo))
 
 (list-T int)
 (make-list-T int #f)
@@ -18,15 +18,16 @@
 (length-list-T int #f)
 (is-empty-list-T int #f)
 
-(extern fn void puk ((int a) (float b)))
-(pub fn bool baz () (return true))
+(extern fn puk ((a int) (b float)) void)
+(pub fn baz () bool
+  (return true))
 
-(extern var int i)
-(var int j)
-(pub var int k)
+(extern var i int)
+(var j int)
+(pub var k int)
 
-(pub fn int main ()
-     (var (struct list-int) *l (make-list-int))
+(pub fn main () int
+     (var l (* struct list-int) (make-list-int))
      (printf "Size of the list: %lu\n" (length-list-int l))
      (add-value-list-int l 3)
      (add-value-list-int l 4)
@@ -35,9 +36,9 @@
        (printf "%d " v))
      (printf "\n")
      (printf "Size of the list: %lu\n" (length-list-int l))
-     (printf "%p\n" (cast void* l->next))
+     (printf "%p\n" (cast l->next (* void)))
      (return 0))
 
-(pub fn void print-list (((const struct list-int) *l))
+(pub fn print-list ((l (* const struct list-int))) void
      (list-for-each (const struct list-int) l int v (printf "%d " v))
      (printf "\n"))
