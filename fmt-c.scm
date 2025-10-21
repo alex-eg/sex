@@ -9,6 +9,7 @@
 (declare (unit fmt-c))
 
 (import fmt
+        srfi-1
         srfi-13)
 
 (define (fmt-in-macro? st) (fmt-ref st 'in-macro?))
@@ -557,10 +558,13 @@
 ;; data structures
 
 (define (c-struct/aux type x . o)
+  ;; can be just pointer to SUC, need to support such case:
+  ;; struct whatever * - body is just '*'
   (let* ((name (if (null? o) (if (or (symbol? x) (string? x)) x #f) x))
          (body (if name (if (not (null? o)) (car o) '()) x))
          (o (if (null? o) o (cdr o))))
-    (if (not (null? body))
+    (if (and (not (null? body))
+             (not (eq? '* body)))
         (c-wrap-stmt
          (cat
           (c-braced-block
@@ -572,7 +576,13 @@
                  (c-wrap-stmt (c-expr body))))))
           (if (pair? o) (cat " " (apply c-begin o)) (dsp ""))))
         (c-wrap-stmt
-         (cat type (if (and name (not (equal? name ""))) (cat " " name) ""))))))
+         (cat type
+              (if (and name (not (equal? name "")))
+                  (cat " " name)
+                  "")
+              (if (not (null? body))
+                  (cat body)
+                  ""))))))
 
 (define (c-struct . args) (apply c-struct/aux "struct" args))
 (define (c-union . args) (apply c-struct/aux "union" args))
@@ -614,7 +624,7 @@
 (define (c-param x)
   (cond
     ((procedure? x) x)
-    ((pair? x) (c-type (car x) (cadr x)))
+    ((pair? x) (c-param-type (car x) (cadr x)))
     (else (error "missing type" x))))
 
 (define (c-field x)
@@ -682,6 +692,33 @@
         ((enum) (apply c-enum name (cdr type)))
         ((struct union class)
          (cat (apply c-struct/aux (car type) (cdr type)) (if name (cat " " name) "")))
+        (else (fmt-join/last c-expr (lambda (x) (c-type x name)) type " "))))
+     ((not type)
+      (lambda (st) ((c-type (or (fmt-default-type st) 'int) name) st)))
+     (else
+      (cat (if (eq? '%pointer type) '* type) (if name (cat " " name) ""))))))
+
+(define (c-param-type type . o)
+  (let ((name (and (pair? o) (car o))))
+    (cond
+     ((pair? type)
+      (case (car type)
+        ((%fun)
+         (cat (c-type (cadr type) #f)
+              " (*" (or name "") ")("
+              (fmt-join (lambda (x) (c-type x #f)) (caddr type) ", ") ")"))
+        ((%array)
+         (let ((name (cat name "[" (if (pair? (cddr type))
+                                       (c-expr (caddr type))
+                                       "")
+                          "]")))
+           (c-type (cadr type) name)))
+        ((%pointer *)
+         (let ((name (cat "*" (if name (c-expr name) ""))))
+           (c-type (cadr type)
+                   (if (and (pair? (cadr type)) (eq? '%array (caadr type)))
+                       (c-paren name)
+                       name))))
         (else (fmt-join/last c-expr (lambda (x) (c-type x name)) type " "))))
      ((not type)
       (lambda (st) ((c-type (or (fmt-default-type st) 'int) name) st)))
