@@ -19,7 +19,7 @@
 (test '%define (atom-to-fmt-c 'define))
 (test '%pointer (atom-to-fmt-c 'pointer))
 (test '%array (atom-to-fmt-c 'array))
-(test 'vector-ref (atom-to-fmt-c '@))
+(test 'vector-ref (atom-to-fmt-c '¤))
 (test '%include (atom-to-fmt-c 'include))
 (test '%cast (atom-to-fmt-c 'cast))
 
