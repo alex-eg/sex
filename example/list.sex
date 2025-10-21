@@ -1,21 +1,21 @@
 (pub defmacro (list-T type)
   (let ((list-type (cat 'list- type)))
     `(struct ,list-type
-       ((,type value)
-        ((* (struct ,list-type)) next)))))
+       ((value ,type)
+        (next (* struct ,list-type))))))
 
 (pub defmacro (make-list-T type is-public?)
   (let ((list-type (list 'struct (cat 'list- type)))
         (fn-name (cat 'make-list- type)))
-    `(,@(if is-public? '(pub) '()) fn (* ,list-type) ,fn-name ()
-      (var (* ,list-type) list (cast (* ,list-type) (malloc (sizeof ,list-type))))
+    `(,@(if is-public? '(pub) '()) fn ,fn-name () (* ,list-type)
+      (var list (* ,list-type) (cast  (malloc (sizeof ,list-type)) (* ,list-type)))
       (= (-> list next) NULL)
       (return list))))
 
 (pub defmacro (add-value-list-T type is-public?)
   (let ((list-type (list 'struct (cat 'list- type)))
         (fn-name (cat 'add-value-list- type)))
-    `(,@(if is-public? '(pub) '()) fn void ,fn-name ((,list-type *list) (,type value))
+    `(,@(if is-public? '(pub) '()) fn ,fn-name ((list * ,list-type) (value ,type)) void
       (while (!= (-> list next) NULL)
         (= list (-> list next)))
       (= (-> list next) (,(cat 'make-list- type)))
@@ -24,23 +24,24 @@
 (pub defmacro (length-list-T type is-public?)
   (let ((fn-name (cat 'length-list- type))
         (list-type (list 'struct (cat 'list- type))))
-    `(,@(if is-public? '(pub) '()) fn size-t ,fn-name ((,list-type *list))
-      (var size-t n 0)
+    `(,@(if is-public? '(pub) '()) fn ,fn-name ((list ,(cons '* list-type))) size-t
+      (var n size-t 0)
       (while (!= (-> list next) NULL)
         (= list (-> list next))
         (++ n))
       (return n))))
 
 (pub defmacro (is-empty-list-T type is-public?)
-  `(,@(if is-public? '(pub) '()) fn bool ,(cat 'is-empty-list- type)
-    ((,(list 'struct (cat 'list- type)) *list))
+  `(,@(if is-public? '(pub) '()) fn ,(cat 'is-empty-list- type)
+    ((list ,(list '* 'struct (cat 'list- type))))
+    bool
     (return (== (-> list next) NULL))))
 
 (pub defmacro (list-for-each list-type list-var elt-type elt-var what-do)
   (let ((list-var-2 (cat list-var '-2)))
     `(begin
-      (var (pointer ,list-type) ,list-var-2 ,list-var)
-      (var ,elt-type ,elt-var (-> ,list-var-2 value))
+      (var ,list-var-2 (* ,list-type) ,list-var)
+      (var ,elt-var ,elt-type (-> ,list-var-2 value))
       (while (!= (-> ,list-var-2 next) NULL)
         ,what-do
         (= ,list-var-2 (-> ,list-var-2 next))
