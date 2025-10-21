@@ -53,43 +53,29 @@
    (string->symbol
     (fmt #f (cadr form) (car form)))))
 
-(define (walk-generic form acc)
-  (cond
-   ((null? form) (cons '() acc))
+(define (walk-generic-toplevel form)
+  (cond ((atom? form) (atom-to-fmt-c form))
+        ((list? form) (map walk-generic-toplevel form))
+        (else (error "Malformed form " form))))
 
-   ;; vector, e.g. {}-initializer
-   ((vector? form)
-    (cons
+(define (field-access-form? form)
+  (and (symbol? (car form))
+       (char=? #\. (string-ref (symbol->string (car form)) 0))))
+
+(define (walk-expr form)
+  (match form
+    ((? vector?)
      (list->vector
-      (car (walk-generic (vector->list form) (list))))
-     acc))
-
-   ;; atom (hopefully)
-   ((not (list? form)) (cons (atom-to-fmt-c form) acc))
-
-   ;; another special case - field access
-   ((and (symbol? (car form))
-         (char=? #\. (string-ref (symbol->string (car form)) 0)))
-    (cons (make-field-access form) acc))
-
-   ;; variable declaration inside function
-   ((eq? (car form) 'var)
-    (cons (walk-var form) acc))
-
-   ;; (cast expr type) -> (%cast type expr)
-   ((eq? (car form) 'cast)
-    (cons (list '%cast
-                (walk-type (drop form 2))
-                (car (walk-generic (second form) (list))))
-          acc))
-
-   ;; toplevel, or a start of a regular list form
-   (else
-    (cons (fold-right
-           walk-generic
-           (list)
-           form)
-          acc))))
+      (walk-expr (vector->list form))))
+    ((? atom?)
+     (atom-to-fmt-c form))
+    ((? field-access-form?)
+     (make-field-access form))
+    (('var . _) (walk-var form))
+    (('cast expr type) (list '%cast
+                             (walk-type type)
+                             (walk-expr expr)))
+    (else (map walk-expr form))))
 
 (define (walk-var form)
   ;; (var a int) -> (%var int a)
@@ -97,15 +83,14 @@
   ;; (var b [const char 512]) -> (%var (%array (const char) 512) b)
   ;; note: [...] is actually (¤ ...) after reading
   ;; (var c (fn ((int) (float)) void)) -> (%var (%fun void ((int) (float))) c)
-  (append
-   (list '%var)
-   (list (walk-type (flatten (third form))))
-   (list (atom-to-fmt-c (second form)))
-
-   (if (null? (drop form 3))
-       (list)
-       (car (walk-generic (drop form 3) (list))))  ; optional init expression
-   ))
+  `(%var
+    ,(walk-type (flatten (third form)))
+    ,(atom-to-fmt-c (second form))
+    .
+    ,(if (null? (drop form 3))
+         (list)
+         (walk-expr (drop form 3)))      ; optional init expression
+    ))
 
 (define (walk-type form)
   ;; int -> int
@@ -131,15 +116,11 @@
 
     ;; Special case: nested structs/unions
     (('struct ((field-names field-types) ...) . attrs)
-     (append `(struct ,(process-struct-fields field-names field-types))
-             (if (null? attrs)
-                 (list)
-                 (list (map atom-to-fmt-c attrs)))))
+     `(struct ,(process-struct-fields field-names field-types)
+              . ,(map atom-to-fmt-c attrs)))
     (('union ((field-names field-types) ...) . attrs)
-     (append `(union ,(process-struct-fields field-names field-types))
-             (if (null? attrs)
-                 (list)
-                 (list (map atom-to-fmt-c attrs)))))
+     `(union ,(process-struct-fields field-names field-types)
+             . ,(map atom-to-fmt-c attrs)))
 
     (else
      (type-convert-to-c form))))
@@ -160,10 +141,10 @@
     (('fn name args ret-type . maybe-body)
      `(%fun
        ,(walk-type ret-type)
-       ,(car (walk-generic name (list)))
+       ,(atom-to-fmt-c name)
        ,(walk-arglist args)
        .
-       ,maybe-body))))
+       ,(walk-expr maybe-body)))))
 
 ;;; Todo: isn't there a better way?
 (define (is-probably-type form)
@@ -193,19 +174,12 @@
                                 (list (walk-type var))))))
        form))
 
-(define (normalize-fn-form form)
+(define (walk-function form)
   ;; (fn ret-type name arglist body) -> normal function
   ;; (fn ret-type name arglist) -> prototype
   (if (>= (length form) 5)
       (walk-fn-def form)
-      (cons 'prototype (cdr (walk-fn-def form)))))
-
-(define (walk-function form static)
-  (if static
-      (walk-generic (list 'static (normalize-fn-form form))
-                    (list))
-      (walk-generic (normalize-fn-form (cdr form))
-                    (list))))
+      (cons '%prototype (cdr (walk-fn-def form)))))
 
 (define (process-struct-fields names types)
   (zip (map walk-type types) (map atom-to-fmt-c names)))
@@ -213,45 +187,52 @@
 (define (walk-struct form)
   (match form
     ((type name ((field-names field-types) ...) . attrs)
-     (list (append `(,type ,(atom-to-fmt-c name)
-                           ,(process-struct-fields field-names field-types))
-                   (if (null? attrs)
-                       (list)
-                       (list (map atom-to-fmt-c attrs))))))
+     `(,type ,(atom-to-fmt-c name)
+             ,(process-struct-fields field-names field-types)
+             . ,(map atom-to-fmt-c attrs)))
     (else (error "Malformed aggregate definition " form))))
 
 (define (walk-extern form)
-  (case (cadr form)
-    ((fn)
-     (list (cons 'extern (walk-function form #f))))
-    ((var)
-     (list (cons 'extern (walk-generic (cdr form) (list)))))
+  (match form
+    (('fn . _)
+     ;; extern function?.. What
+     (list 'extern (walk-function form)))
+    (('var . _)
+     (list 'extern (walk-var form)))
     (else (error "Extern what?"))))
 
 (define (walk-public form)
-  (case (cadr form)
-    ((fn)
-     (walk-function form #f))
-    ((var)
-     (walk-generic (walk-var (cdr form)) (list)))
-    ((define defmacro import include struct typedef union var)
+  (match form
+    (('fn . _)
+     (walk-function form))
+    (('var . _)
+     (walk-var form))
+    ((or ('define . _)
+         ('defmacro . _)
+
+         ('import . _)
+         ('include . _)
+
+         ('struct . _)
+         ('union . _)
+
+         ('typedef . _))
      ;; ignore here, used in generating public interface
-     (process-toplevel-form (cdr form)))
+     (process-toplevel-form form))
     (else
      (error "Pub what?" (cadr form)))))
 
 (define (process-toplevel-form form)
-  ;; todo: rewrite to match
-  ;; for some reason should return list in a list; TODO: rewrite
-  (case (car form)
-    ((fn) (walk-function form #t))
-    ((var) (walk-generic (list 'static (walk-var form)) (list)))
-    ((extern) (walk-extern form))
-    ((pub) (walk-public form))
-    ((struct union) (walk-struct form))
-    (else (walk-generic form (list)))))
+  (match form
+    (('fn . _) (list 'static (walk-function form)))
+    (('var . _) (list 'static (walk-var form)))
+    (('extern . rest) (walk-extern rest))
+    (('pub . rest) (walk-public rest))
+    ((or ('struct . _)
+         ('union . _)) (walk-struct form))
+    (else (walk-expr form))))
 
 (define (emit-c sex-forms)
   (for-each (lambda (form)
-              (fmt #t (c-expr (car (process-toplevel-form form))) nl))
+              (fmt #t (c-expr (process-toplevel-form form)) nl))
             sex-forms))
