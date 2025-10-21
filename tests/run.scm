@@ -9,6 +9,7 @@
 
 (include "basic.scm")
 (include "semen.scm")
+(include "utils.scm")
 
 ;;; Should be the last in the test suite
 (test-exit)

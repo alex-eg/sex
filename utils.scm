@@ -4,7 +4,8 @@
 
 (import
   (chicken pathname)
-  (chicken process-context))
+  (chicken process-context)
+  srfi-1)
 
 (define (get-env-var name)
   (get-environment-variable name))
@@ -17,3 +18,21 @@
         (make-absolute-pathname
          (current-directory)
          (pathname-directory file))))))
+
+(define (list-split src-list split-elt)
+  ;; split '(1 2 / 3 4 / 5 6) by '/ -> '((1 2) (3 4) (5 6))
+  (fold (lambda (elt acc)
+          (if (eq? elt split-elt)
+              (append acc (list (list)))
+              (append (drop-right acc 1)
+                      (list (append (last acc) (list elt))))))
+        (list (list))
+        src-list))
+
+(define (list-join lists join-by)
+  (drop-right
+   (fold (lambda (elt acc)
+           (append acc (list elt) (list join-by)))
+         (list)
+         lists)
+   1))
