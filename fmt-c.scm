@@ -607,9 +607,11 @@
 
 (define (c-while check . body)
   (c-reset-newline
-   (cat (c-block (cat "while (" (c-in-test (c-expr check)) ")")
-                 (c-in-stmt (apply c-begin body)))
-        fl)))
+   (if (null? body)
+       (cat "while (" (c-in-test (c-expr check)) ");")
+       (cat (c-block (cat "while (" (c-in-test (c-expr check)) ")")
+                     (c-in-stmt (apply c-begin body)))
+            fl))))
 
 (define (c-for init check update . body)
   (c-reset-newline
