@@ -84,7 +84,7 @@
   ;; note: [...] is actually (¤ ...) after reading
   ;; (var c (fn ((int) (float)) void)) -> (%var (%fun void ((int) (float))) c)
   `(%var
-    ,(walk-type (flatten (third form)))
+    ,(walk-type (third form))
     ,(atom-to-fmt-c (second form))
     .
     ,(if (null? (drop form 3))
@@ -104,23 +104,26 @@
     (('¤ . array-type)
      (if (integer? (last array-type))
          ;; sized array
-         (let ((type (drop-right array-type 1))
-               (size (last array-type)))
-           `(%array ,(walk-type (flatten type))
+         (let* ((type-list (drop-right array-type 1))
+                (type (if (and (list? (car type-list))
+                               (= 1 (length type-list)))
+                          (car type-list)
+                          type-list))
+                (size (last array-type)))
+           `(%array ,(walk-type type)
                     ,size))
          ;; sugar for pointer... Do we really need it? Guess why not,
          ;; it's a strong semantic cue
-         `(%array ,(walk-type (flatten array-type)))))
+         `(%array ,(walk-type (if (and (list? (car array-type))
+                                       (= 1 (length array-type)))
+                                  (car array-type)
+                                  array-type)))))
     (('fn arglist ret-type)
      `(%fun ,(walk-type ret-type) ,(walk-arglist arglist)))
 
     ;; Special case: nested structs/unions
-    (('struct ((field-names field-types) ...) . attrs)
-     `(struct ,(process-struct-fields field-names field-types)
-              . ,(map atom-to-fmt-c attrs)))
-    (('union ((field-names field-types) ...) . attrs)
-     `(union ,(process-struct-fields field-names field-types)
-             . ,(map atom-to-fmt-c attrs)))
+    ((or ('struct . _)
+         ('union . _)) (walk-struct form))
 
     (else
      (type-convert-to-c form))))
@@ -181,14 +184,22 @@
       (walk-fn-def form)
       (cons '%prototype (cdr (walk-fn-def form)))))
 
-(define (process-struct-fields names types)
-  (zip (map walk-type types) (map atom-to-fmt-c names)))
+(define (process-struct-fields fields)
+  (map (fn
+        (let ((type (walk-type (last x))))
+          (cons type (map atom-to-fmt-c (drop-right x 1)))))
+       fields))
 
 (define (walk-struct form)
   (match form
-    ((type name ((field-names field-types) ...) . attrs)
+    ((type (fields ...) . attrs)        ; anonymous struct
+     `(,type ,(process-struct-fields fields)
+             . ,(map atom-to-fmt-c attrs)))
+    ((type name)                        ; simple 'struct whatever', like in variable def
+     `(,type ,(atom-to-fmt-c name)))
+    ((type name (fields ...) . attrs)
      `(,type ,(atom-to-fmt-c name)
-             ,(process-struct-fields field-names field-types)
+             ,(process-struct-fields fields)
              . ,(map atom-to-fmt-c attrs)))
     (else (error "Malformed aggregate definition " form))))
 

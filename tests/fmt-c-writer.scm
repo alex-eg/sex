@@ -10,8 +10,8 @@
    (walk-type '(¤ const char 512)))
 
   (test
-   '(%array (float 512))
-   (walk-type '(¤ (float 512))))
+   '(%array (float) 512)
+   (walk-type '(¤ (float) 512)))
 
   (test
    '(%array (const char) 512)
@@ -101,6 +101,22 @@
   (test
    '(struct no_kebab ((int a) (float f)))
    (walk-struct '(struct no-kebab ((a int) (f float)))))
+
+  (test
+   '(struct settings ((u32 x y w h)
+                      ((%array (struct ((float r g b a))) 4) colors)))
+   (walk-struct
+    '(struct settings
+             ((x y w h u32)
+              (colors [¤ struct ((r g b a float)) 4])))))
+
+  (test
+   '(struct settings ((u32 x y w h)
+                      ((%array (struct color ((float r g b a))) 4) colors)))
+   (walk-struct
+    '(struct settings
+             ((x y w h u32)
+              (colors [¤ struct color ((r g b a float)) 4])))))
 
   (test
    '(struct mega_kebab ((int a)
