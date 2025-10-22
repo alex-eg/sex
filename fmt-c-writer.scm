@@ -75,6 +75,7 @@
     (('cast expr type) (list '%cast
                              (walk-type type)
                              (walk-expr expr)))
+    (('enum . _) (walk-enum form))
     ;; | is problematic... And c-or/bit-or/etc are actually
     ;; procedures, so we have to call the procedure itself
     (('c-or . rest) (apply c-or (map walk-expr rest)))
@@ -130,6 +131,7 @@
     ((or ('struct . _)
          ('union . _)) (walk-struct form))
 
+    (('enum . _) (walk-enum form))
     (else
      (type-convert-to-c form))))
 
@@ -208,6 +210,13 @@
              . ,(tree-map atom-to-fmt-c attrs)))
     (else (error "Malformed aggregate definition " form))))
 
+(define (walk-enum form)
+  (match form
+    (('enum (values ...))
+     `(enum ,(map atom-to-fmt-c values)))
+    (('enum name (values ...))
+     `(enum ,(atom-to-fmt-c name) ,(map atom-to-fmt-c values)))))
+
 (define (walk-extern form)
   (match form
     (('fn . _)
@@ -246,6 +255,7 @@
     (('pub . rest) (walk-public rest))
     ((or ('struct . _)
          ('union . _)) (walk-struct form))
+    (('enum . _) (walk-enum form))
     (else (walk-expr form))))
 
 (define (emit-c sex-forms)
