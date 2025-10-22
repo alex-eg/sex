@@ -85,7 +85,8 @@
 (define (c-maybe-paren op x)
   (lambda (st)
     ((fmt-let 'op op
-              (if (c-op<= (fmt-op st) op)
+              (if (and (c-op<= (fmt-op st) op)
+                       (not (vector? st)))
                   (c-paren x)
                   x))
      st)))
