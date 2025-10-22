@@ -194,13 +194,13 @@
   (match form
     ((type (fields ...) . attrs)        ; anonymous struct
      `(,type ,(process-struct-fields fields)
-             . ,(map atom-to-fmt-c attrs)))
+             . ,(tree-map atom-to-fmt-c attrs)))
     ((type name)                        ; simple 'struct whatever', like in variable def
      `(,type ,(atom-to-fmt-c name)))
     ((type name (fields ...) . attrs)
      `(,type ,(atom-to-fmt-c name)
              ,(process-struct-fields fields)
-             . ,(map atom-to-fmt-c attrs)))
+             . ,(tree-map atom-to-fmt-c attrs)))
     (else (error "Malformed aggregate definition " form))))
 
 (define (walk-extern form)
