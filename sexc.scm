@@ -117,6 +117,18 @@
       (with-directory input-source
         (semen-process raw-forms))))
 
+(define prelude
+  '((include inttypes.h)
+
+    (typedef u8 uint8-t)
+    (typedef i8 int8-t)
+    (typedef u16 uint16-t)
+    (typedef i16 int16-t)
+    (typedef u32 uint32-t)
+    (typedef i32 int32-t)
+    (typedef u64 uint64-t)
+    (typedef i64 int64-t)))
+
 (define (main)
   (let* ((raw-args (command-line-arguments))
          (args (getopt-long raw-args
@@ -142,7 +154,7 @@
          (return #f))
        (load-persistent-module-paths)
 
-       (let* ((raw-forms (read-raw-forms input))
+       (let* ((raw-forms (append prelude (read-raw-forms input)))
               (sex-forms (semantic-process-forms raw-forms input)))
          (if (or (get-arg args 'macro-expand #f)
                  (get-arg args 'emit-c #f))
