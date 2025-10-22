@@ -62,6 +62,7 @@
          ('pub 'var . _)
          ('extern 'var . _)) (process-global-var sex-form acc))
     (('include _) (cons sex-form acc))
+    (('define . _) (cons sex-form acc))
 
     (('import . modules)
      (semen-process-imports (get-public-forms modules) acc))
