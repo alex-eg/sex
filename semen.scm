@@ -67,6 +67,10 @@
     ((or ('defmacro . rest)
          ('pub 'defmacro . rest)) (defmacro rest) acc)
 
+    ((or ('typedef new-type target)
+         ('pub 'typedef new-type target))
+     (process-typedef new-type target acc))
+
     (else (assert #f (fmt #f "Unknown top level form " sex-form)))))
 
 (define (semen-process-imports module-public-forms acc)
@@ -110,6 +114,11 @@
            (eq? new-cdr (cdr old-cons)))
       old-cons
       (cons new-car new-cdr)))
+
+;;; Typdef
+
+(define (process-typedef new-type target acc)
+  (cons `(typedef ,target ,new-type) acc))
 
 ;;; Fn processing
 
