@@ -256,6 +256,7 @@
     ((or ('struct . _)
          ('union . _)) (walk-struct form))
     (('enum . _) (walk-enum form))
+    (('define name . rest) `(%define ,(atom-to-fmt-c name) ,@rest))
     (else (walk-expr form))))
 
 (define (emit-c sex-forms)
