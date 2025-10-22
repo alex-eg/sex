@@ -54,13 +54,13 @@ An example of Sex source:
 #+begin_src scheme
 (include stdio.h)
 
-(pub fn int main ((int argc) (char **argv))
+(pub fn main ((argc int) (argv  [* const char])) int
   (puts "Hello from Sex!")
-  (var (array char 512) name)
+  (var name [char 512])
   (puts "What is your name?")
-  (scanf "%s" (cast char* &name))
+  (scanf "%s" (cast (& name) (* char)))
   (printf "Hello, %s!\n" name)
-  0)
+  (return 0))
 #+end_src
 
 Compile and run:
@@ -106,16 +106,16 @@ return Sex code.
 (pub defmacro (list-T type)
   (let ((list-type (cat 'list- type)))
     `(struct ,list-type
-       ((,type value)
-        ((* ,list-type) next)))))
+       ((value ,type)
+        (next (* ,list-type))))))
 
 (list-T int)
 #+end_src
 ->
 #+begin_src scheme
 (struct list_int
- ((int value)
-  ((* list_int) next)))
+ ((value int)
+  (next (* list_int))))
 #+end_src
 
 **** Wrapper for checking return codes
@@ -126,16 +126,16 @@ return Sex code.
          (puts ,message)
          (return ,ret-code))))
 
-(pub fn int init ()
+(pub fn init () int
   (check-sdl-return
     (SDL-Init SDL-INIT-VIDEO) "Failed to initialize SDL" 1)
 ...)
 #+end_src
 ->
 #+begin_src c
-(%fun int init ()
+(pub fn init () init
   (if (< 0 (SDL_Init SDL_INIT_VIDEO))
-    (%begin (puts "Failed to initialize SDL") (return 1)))
+    (begin (puts "Failed to initialize SDL") (return 1)))
   ...)
 }
 #+end_src
