@@ -75,6 +75,11 @@
     (('cast expr type) (list '%cast
                              (walk-type type)
                              (walk-expr expr)))
+    ;; | is problematic... And c-or/bit-or/etc are actually
+    ;; procedures, so we have to call the procedure itself
+    (('c-or . rest) (apply c-or (map walk-expr rest)))
+    (('c-bit-or . rest) (apply c-bit-or (map walk-expr rest)))
+    (('c-bit-or= . rest) (apply c-bit-or= (map walk-expr rest)))
     (else (map walk-expr form))))
 
 (define (walk-var form)
