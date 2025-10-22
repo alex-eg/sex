@@ -56,6 +56,8 @@
          ('pub 'struct . _)) (process-struct sex-form acc))
     ((or ('union . _)
          ('pub 'union . _)) (process-struct sex-form acc))
+    ((or ('enum . _)
+         ('pub 'enum . _)) (process-struct sex-form acc))
     ((or ('var . _)
          ('pub 'var . _)
          ('extern 'var . _)) (process-global-var sex-form acc))
@@ -162,7 +164,7 @@
      (process-fn `(fn ,ret-type ,name ,arglist ,@body) (list)))
     (else (assert #f (fmt #f "Malformed lambda " form)))))
 
-;;; Struct
+;;; Structs
 
 (define (process-struct sex-struct acc)
   (cons sex-struct acc))
