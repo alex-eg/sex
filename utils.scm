@@ -36,3 +36,10 @@
          (list)
          lists)
    1))
+
+;;; Reconstruct form
+(define (recons old-cons new-car new-cdr)
+  (if (and (eq? new-car (car old-cons))
+           (eq? new-cdr (cdr old-cons)))
+      old-cons
+      (cons new-car new-cdr)))

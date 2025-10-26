@@ -2,7 +2,8 @@
 
 (declare (unit semen)
          (uses sex-macros
-               sex-modules))
+               sex-modules
+               utils))
 
 (import
   (chicken string)
@@ -111,12 +112,6 @@
                      new-form
                      (semen-walk-form (car new-form) walk-fn env)
                      (semen-walk-form (cdr new-form) walk-fn env)))))))
-
-(define (recons old-cons new-car new-cdr)
-  (if (and (eq? new-car (car old-cons))
-           (eq? new-cdr (cdr old-cons)))
-      old-cons
-      (cons new-car new-cdr)))
 
 ;;; Typdef
 
