@@ -96,22 +96,36 @@
    form
    (lambda (subform env)
      (if (sex-macro? subform)
-         (apply-macro subform)
+         (cons semen-walk-embed-result (semen-apply-macro subform (list)))
          subform))
    #f))
 
-;;; TODO: for greater inspiration, see SBCL's walk.lisp and their
-;;; template system. Maybe it is worth it to implement something
-;;; similar here
+;;; semen-walk-form and friends: form walker with various abilities.
+;;; By default, replaces walked form with walk-fn result But may
+;;; perform additional operations depending of what the walk function
+;;; has requested.
+
+;;; For inspiration, see SBCL's walk.lisp and their template
+;;; system.
+
+(define semen-walk-embed-result (gensym)
+  ;; For cases when result is a list which must be embedded in the
+  ;; form, e.g. when it returned from a macro
+  )
+
 (define (semen-walk-form form walk-fn env)
   (if (atom? form) form
       (let ((new-form (walk-fn form env)))
         (cond ((not (eq? form new-form))
                (semen-walk-form new-form walk-fn env))
-              (else (recons
-                     new-form
-                     (semen-walk-form (car new-form) walk-fn env)
-                     (semen-walk-form (cdr new-form) walk-fn env)))))))
+              (else
+               (let ((new-car (semen-walk-form (car new-form) walk-fn env))
+                     (new-cdr (semen-walk-form (cdr new-form) walk-fn env)))
+                 (cond ((and (pair? new-car)
+                             (eq? (car new-car) semen-walk-embed-result))
+                        (append (cdr new-car) new-cdr))
+                       (else
+                        (recons new-form new-car new-cdr)))))))))
 
 ;;; Typdef
 
