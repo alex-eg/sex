@@ -65,6 +65,14 @@
    (walk-var '(var s (struct suc))))
 
   (test
+   '(%var (const struct suc *) s s1)
+   (walk-var '(var s (* const struct suc) s1)))
+
+  (test
+   '(%var (const struct suc *) s s1)
+   (walk-var '(var s (* (const struct suc)) s1)))
+
+  (test
    '(%var (struct suc) s (hoge piyo))
    (walk-var '(var s (struct suc) (hoge piyo))))
 
