@@ -141,10 +141,11 @@
   ;; * const char -> const char *
   ;; const * const char -> const char * const
   (if (atom? type) (atom-to-fmt-c type)
-      (tree-map atom-to-fmt-c
-                (fold-right append (list)
-                            (list-join (reverse (list-split type '*))
-                                       '(*))))))
+      (flatten
+       (tree-map atom-to-fmt-c
+                 (fold-right append (list)
+                             (list-join (reverse (list-split type '*))
+                                        '(*)))))))
 
 (define (walk-fn-def form)
   (match form
