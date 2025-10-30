@@ -47,6 +47,27 @@
    '(%fun void ((int) (%array float) (%array (struct what * const))))
    (walk-type '(fn ((int) (¤ float) (¤ (const * struct what))) void)))
 
+  (test
+   '(%array (%fun void ((int) (%array float) (%array (struct what * const)))))
+   (walk-type '(¤ (fn ((int) (¤ float) (¤ (const * struct what))) void))))
+
+  ;; Type convert to C
+  (test
+   '(int)
+   (type-convert-to-c '(int)))
+
+  (test
+   '(* int)
+   (type-convert-to-c '(int *)))
+
+  (test
+   '(* const int)
+   (type-convert-to-c '(const int *)))
+
+  (test
+   '(const * const char)
+   (type-convert-to-c '(const char * const)))
+
 ;;; Variable defs
   (test
    '(%var (%array float 8) a)
