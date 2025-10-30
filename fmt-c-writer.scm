@@ -157,7 +157,7 @@
        .
        ,(walk-expr maybe-body)))))
 
-;;; Todo: isn't there a better way?
+;;; TODO: isn't there a better way?
 (define (is-probably-type form)
   (case (car form)
     ((¤ * const volatile struct union) #t)
