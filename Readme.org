@@ -124,7 +124,7 @@ return Sex code.
   `(if (< 0 ,call)
        (begin
          (puts ,message)
-         (return ,ret-code))))
+         (return ,ret-code)))))
 
 (pub fn init () int
   (check-sdl-return
@@ -132,8 +132,8 @@ return Sex code.
 ...)
 #+end_src
 ->
-#+begin_src c
-(pub fn init () init
+#+begin_src scheme
+(pub fn init () int
   (if (< 0 (SDL_Init SDL_INIT_VIDEO))
     (begin (puts "Failed to initialize SDL") (return 1)))
   ...)
