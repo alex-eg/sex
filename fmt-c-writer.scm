@@ -126,6 +126,8 @@
          `(%array ,(walk-type (maybe-unwrap-type array-type)))))
     (('fn arglist ret-type)
      `(%fun ,(walk-type ret-type) ,(walk-arglist arglist)))
+    (('fn . _)
+     (assert #f "Malformed function type form"))
 
     ;; Special case: nested structs/unions
     ((or ('struct . _)
