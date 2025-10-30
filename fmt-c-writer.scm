@@ -46,6 +46,12 @@
          (unkebabify atom)
          atom))))
 
+(define (maybe-unwrap-type type)
+  (if (and (list? type)
+           (= 1 (length type)))
+      (car type)
+      type))
+
 (define (make-field-access form)
   (assert
    (= 2 (length form)) "Wrong field access format")
@@ -111,19 +117,13 @@
      (if (integer? (last array-type))
          ;; sized array
          (let* ((type-list (drop-right array-type 1))
-                (type (if (and (list? (car type-list))
-                               (= 1 (length type-list)))
-                          (car type-list)
-                          type-list))
+                (type (maybe-unwrap-type type-list))
                 (size (last array-type)))
            `(%array ,(walk-type type)
                     ,size))
          ;; sugar for pointer... Do we really need it? Guess why not,
          ;; it's a strong semantic cue
-         `(%array ,(walk-type (if (and (list? (car array-type))
-                                       (= 1 (length array-type)))
-                                  (car array-type)
-                                  array-type)))))
+         `(%array ,(walk-type (maybe-unwrap-type array-type)))))
     (('fn arglist ret-type)
      `(%fun ,(walk-type ret-type) ,(walk-arglist arglist)))
 
@@ -179,9 +179,7 @@
           ;; 1 element args are always type
           ((_) (walk-type x))
 
-          ((var . type) (append (list (walk-type (if (= 1 (length type))
-                                                     (car type)
-                                                     type)))
+          ((var . type) (append (list (walk-type (maybe-unwrap-type type)))
                                 (list (walk-type var))))))
        form))
 
