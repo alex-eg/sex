@@ -145,9 +145,9 @@
   (if (atom? type) (atom-to-fmt-c type)
       (flatten
        (tree-map atom-to-fmt-c
-                 (fold-right append (list)
-                             (list-join (reverse (list-split type '*))
-                                        '(*)))))))
+                 (flatten
+                  (list-join (reverse (list-split type '*))
+                             '(*)))))))
 
 (define (walk-fn-def form)
   (match form
