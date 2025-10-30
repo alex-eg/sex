@@ -26,7 +26,7 @@
    (walk-type '(¤ (const char))))
 
   (test
-   '(%array (float) 8)
+   '(%array float 8)
    (walk-type '(¤ float 8)))
 
   (test
@@ -40,16 +40,16 @@
    (walk-type '(const * const char)))
 
   (test
-   '(%fun void ((int) (float) (struct what *)))
-   (walk-type '(fn ((int) (float) (* struct what)) void)))
+   '(%fun void ((int) (float) (%array (struct what * const))))
+   (walk-type '(fn ((int) (float) (¤ (const * struct what))) void)))
 
   (test
-   '(%fun void ((int) (%array (float)) (struct what *)))
-   (walk-type '(fn ((int) (¤ float) (* struct what)) void)))
+   '(%fun void ((int) (%array float) (%array (struct what * const))))
+   (walk-type '(fn ((int) (¤ float) (¤ (const * struct what))) void)))
 
 ;;; Variable defs
   (test
-   '(%var (%array (float) 8) a)
+   '(%var (%array float 8) a)
    (walk-var '(var a (¤ float 8))))
 
   (test
@@ -82,7 +82,7 @@
 
 ;;; Fn defs
   (test
-   '(%fun void puk ((int) (%array (float) 8)))
+   '(%fun void puk ((int) (%array float 8)))
    (walk-fn-def '(fn puk ((int) (¤ float 8)) void)))
 
   (test
@@ -129,7 +129,7 @@
   (test
    '(struct mega_kebab ((int a)
                         ((struct ((int year) (int month) (int day))) dob)
-                        ((%fun int ((int) (%array (int)))) min)))
+                        ((%fun int ((int) (%array int))) min)))
    (walk-struct '(struct mega-kebab
                          ((a int)
                           (dob (struct ((year int)
