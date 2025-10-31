@@ -2,6 +2,10 @@ CHICKEN_C = csc
 CSC_FLAGS += -K prefix
 CHICKEN_INSTALL = chicken-install
 
+prefix ?= /usr/local
+exec_prefix ?= $(prefix)
+bindir ?= $(exec_prefix)/bin
+
 MODULES = sexc fmt-c fmt-c-writer semen sex-macros sex-modules sex-reader utils
 OBJ = $(MODULES:%=%.o)
 
@@ -25,6 +29,15 @@ main.o: main.scm
 
 %.o: %.scm
 	$(CHICKEN_C) $(CSC_FLAGS) $< -e -c -o $@
+
+install: sexc installdirs
+	install -m 755 ./sexc $(bindir)
+
+installdirs:
+	mkdir -pv $(bindir)
+
+uninstall:
+	rm -fv $(bindir)/sexc
 
 sex-tests: $(OBJ) tests/*.scm
 	cd ./tests && $(CHICKEN_C) $(CSC_FLAGS) run.scm -c -o sex-tests.o
