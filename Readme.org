@@ -21,7 +21,22 @@ https://wiki.call-cc.org/man/5/Extension%20tools#changing-the-repository-locatio
 ~chicken-install `cat dependencies.txt`~
 
 ** Compilation
-~make~
+#+begin_src sh
+  make
+#+end_src
+
+** Static compilation
+The default ~CSC_FLAGS~ include ~-static~, so ~sexc~ does not need
+~.eggs~ at runtime and ~make install~ stays relocatable. Chicken must
+provide ~libchicken.a~ (E.g. for gentoo: ~dev-scheme/chicken~ with
+~static-libs~ use flag).
+
+To link dynamically instead (the binary will look for eggs under this
+tree's ~.eggs~ path):
+
+#+begin_src sh
+  make CSC_FLAGS='-K prefix'
+#+end_src
 
 * Usage
 ** Summary
