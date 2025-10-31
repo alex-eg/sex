@@ -21,7 +21,16 @@ https://wiki.call-cc.org/man/5/Extension%20tools#changing-the-repository-locatio
 ~chicken-install `cat dependencies.txt`~
 
 ** Compilation
-~make~
+#+begin_src sh
+  make
+#+end_src
+
+** Static compilation
+If you want to make a self-contained binary, you'll need `chicken` with `libchicken.a` installed.
+
+#+begin_src sh
+  CSC_FLAGS=-static make
+#+end_src
 
 * Usage
 ** Summary
