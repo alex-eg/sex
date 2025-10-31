@@ -46,3 +46,5 @@ clean:
 	rm -f *.import.scm
 	rm -f *.link
 	rm -f sex-tests
+
+.PHONY: clean

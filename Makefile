@@ -14,6 +14,15 @@ CSC_FLAGS += -K prefix -static
 #     error.
 # -c: Stop after compilation to object files. This one is obvious.
 
+# GNU directory variables. Command line overrides, e.g.
+#   make prefix=$(HOME)/.local install
+#   make DESTDIR=/tmp/stage prefix=/usr install
+prefix = /usr/local
+exec_prefix = $(prefix)
+bindir = $(exec_prefix)/bin
+INSTALL = install
+INSTALL_PROGRAM = $(INSTALL)
+
 MODULE_FLAGS = -emit-all-import-libraries -module-registration -c
 
 # Order matters, since module check correctness on compilation
@@ -129,6 +138,12 @@ clean:
 	rm -f *.import.scm
 	rm -f *.link
 	rm -f sexc sex-tests sextest
+	$(MAKE) -C ./tests clean
 	$(MAKE) -C ./tests/modules clean
+	$(MAKE) -C ./tools/sextest clean
 
-.PHONY: clean depclean deps run-tests sex-tests sextest check-modules check-exit-code
+deps-clean:
+	rm -rf $(EGGS_DIR)
+
+.PHONY: all check run-tests check-modules check-exit-code install install-strip installdirs
+	uninstall deps deps-update clean depsclean sex-tests sextest

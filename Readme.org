@@ -38,6 +38,18 @@ tree's ~.eggs~ path):
   make CSC_FLAGS='-K prefix'
 #+end_src
 
+** Installation
+GNU directory variables: ~prefix~, ~exec_prefix~, ~bindir~, ~DESTDIR~.
+
+#+begin_src sh
+  # default installation (/usr/local/bin/)
+  make install
+  # customize the prefix (installs to ~/.local/bin)
+  make prefix=$(HOME)/.local install
+  # staged install for packaging
+  make DESTDIR=/tmp/stage prefix=/usr install
+#+end_src
+
 * Usage
 ** Summary
 #+begin_src
