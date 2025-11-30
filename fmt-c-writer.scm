@@ -6,14 +6,15 @@
                utils))
 
 (import (chicken string)
+        (chicken syntax)
         brev-separate
         fmt
         matchable
         regex
         srfi-1                          ; lists
         srfi-13                         ; strings
-        tree
-        )
+        srfi-39                         ; parameters
+        tree)
 
 (define (unkebabify sym)
   (case sym
@@ -260,7 +261,23 @@
     (('define name . rest) `(%define ,(atom-to-fmt-c name) ,@rest))
     (else (walk-expr form))))
 
+(define (get-line-num form)
+  (let ((num (get-line-number form)))
+    (if (string? num)
+        (last (string-split num ":"))
+        #f)))
+
+(define sex-fmt-current-file (make-parameter "/dev/null"))
+(define sex-fmt-line-num (make-parameter 0))
+
+(define (line-directive-string)
+  (fmt #f #\# "line " (sex-fmt-line-num) " " #\" (sex-fmt-current-file) #\"))
+
 (define (emit-c sex-forms)
   (for-each (lambda (form)
+              (let ((start-line (get-line-num form)))
+                (when start-line
+                  (sex-fmt-line-num start-line)
+                  (fmt #t (line-directive-string) nl)))
               (fmt #t (c-expr (process-toplevel-form form)) nl))
             sex-forms))

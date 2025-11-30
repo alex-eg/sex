@@ -19,6 +19,13 @@
          (current-directory)
          (pathname-directory file))))))
 
+(define (to-absolute-pathname pathname)
+  (if (absolute-pathname? pathname)
+      pathname
+      (make-absolute-pathname
+       (current-directory)
+       pathname)))
+
 (define (list-split src-list split-elt)
   ;; split '(1 2 / 3 4 / 5 6) by '/ -> '((1 2) (3 4) (5 6))
   (fold (lambda (elt acc)

@@ -9,11 +9,12 @@
   (chicken port)
   (chicken read-syntax)
   (chicken string)
+  (chicken syntax)
   brev-separate
   fmt)
 
 (define (read-forms acc)
-  (let ((r (read)))
+  (let ((r (read-with-source-info (current-input-port))))
     (if (eof-object? r) (reverse acc)
         (read-forms (cons r acc)))))
 
