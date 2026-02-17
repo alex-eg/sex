@@ -1,20 +1,20 @@
 ;;; Sex fmt-c output writer
 
-(declare (unit fmt-c-writer)
-         (uses fmt-c
-               semen
-               utils))
-
-(import (chicken string)
-        (chicken syntax)
-        brev-separate
-        fmt
-        matchable
-        regex
-        srfi-1                          ; lists
-        srfi-13                         ; strings
-        srfi-39                         ; parameters
-        tree)
+(import
+  scheme
+  (chicken base)
+  (chicken string)
+  (chicken syntax)
+  brev-separate
+  fmt
+  sex-fmt-c
+  matchable
+  regex
+  srfi-1                                ; lists
+  srfi-13                               ; strings
+  srfi-39                               ; parameters
+  tree
+  utils)
 
 (define (unkebabify sym)
   (case sym

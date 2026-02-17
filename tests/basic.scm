@@ -1,3 +1,5 @@
+(import fmt-c-writer)
+
 (test-group "basic"
 
   ;; unkebabify

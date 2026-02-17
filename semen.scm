@@ -1,17 +1,21 @@
 ;;; Sex semantic engine
 
-(declare (unit semen)
-         (uses sex-macros
-               sex-modules
-               utils))
-
 (import
+  scheme
+  (chicken base)
+  (chicken keyword)
   (chicken string)
+  (chicken module)
   fmt
-  matchable                             ; pattern matching
-  srfi-1                                ; list routines
-  srfi-69                               ; hash tables
+  sex-macros
+  sex-modules
+  matchable                         ; pattern matching
+  srfi-1                            ; list routines
+  srfi-69                           ; hash tables
+  utils
   )
+
+(export/rename (process semen-process))
 
 ;;; for lambda extraction, docstring processing, macro expansion,
 ;;; injection of module headers, i.e. all things that rearrange code
@@ -21,28 +25,28 @@
 ;;; append their return to the resulting list. Each handler can return
 ;;; multiple forms, e.g. lambdas collected from a function may result
 ;;; in auxiliary structures and functions.
-(define (semen-process raw-sex-forms)
-  (semen-process-rec raw-sex-forms (list)))
+(define (process raw-sex-forms)
+  (process-rec raw-sex-forms (list)))
 
-(define (semen-process-rec forms acc)
+(define (process-rec forms acc)
   (cond
    ((null? forms) (reverse acc))
-   ((sex-macro? (car forms))
-    (semen-process-rec
-     (semen-apply-macro (car forms) (cdr forms))
+   ((macro? (car forms))
+    (process-rec
+     (macroexpand (car forms) (cdr forms))
      acc))
    (else
-    (semen-process-rec (cdr forms)
-                       (match-sex-form (car forms) acc)))))
+    (process-rec (cdr forms)
+                 (match-sex-form (car forms) acc)))))
 
-(define (semen-apply-macro macro-form rest-forms)
-;; We want to replace macro with its expansion. The problem is,
-;; top-level macro can return either a single form, or a list of
-;; forms, when it for example generates some aux
-;; structures/functions/typedefs.
-;;
-;; Single form we just cons to the top of rest-forms, but multiple
-;; forms have to be appended to the rest-forms.
+(define (macroexpand macro-form rest-forms)
+  ;; We want to replace macro with its expansion. The problem is,
+  ;; top-level macro can return either a single form, or a list of
+  ;; forms, when it for example generates some aux
+  ;; structures/functions/typedefs.
+  ;;
+  ;; Single form we just cons to the top of rest-forms, but multiple
+  ;; forms have to be appended to the rest-forms.
   (let ((res (apply-macro macro-form)))
     (if (list? (car res))
         (append res rest-forms)
@@ -66,7 +70,7 @@
     (('define . _) (cons sex-form acc))
 
     (('import . modules)
-     (semen-process-imports (get-public-forms modules) acc))
+     (process-imports (get-modules-public-forms modules) acc))
 
     ((or ('defmacro . rest)
          ('pub 'defmacro . rest)) (defmacro rest) acc)
@@ -77,30 +81,30 @@
 
     (else (assert #f (fmt #f "Unknown top level form " sex-form)))))
 
-(define (semen-process-imports module-public-forms acc)
+(define (process-imports module-public-forms acc)
   ;; Recursively process imports: register public macros, cons all
   ;; other public things to our acc
   (if (null? module-public-forms) acc
       (match (car module-public-forms)
         (('defmacro . rest)
          (defmacro rest)
-         (semen-process-imports (cdr module-public-forms) acc))
+         (process-imports (cdr module-public-forms) acc))
         (else
-         (semen-process-imports (cdr module-public-forms)
-                                (cons (car module-public-forms)
-                                      acc))))))
+         (process-imports (cdr module-public-forms)
+                          (cons (car module-public-forms)
+                                acc))))))
 
-(define (semen-macro-expand form)
+(define (macro-expand form)
   "Walk the form recursively and expand all macros, until none is left."
-  (semen-walk-form
+  (walk-form
    form
    (lambda (subform env)
-     (if (sex-macro? subform)
-         (cons semen-walk-embed-result (semen-apply-macro subform (list)))
+     (if (macro? subform)
+         (cons walk-embed-result (macroexpand subform (list)))
          subform))
    #f))
 
-;;; semen-walk-form and friends: form walker with various abilities.
+;;; walk-form and friends: form walker with various abilities.
 ;;; By default, replaces walked form with walk-fn result But may
 ;;; perform additional operations depending of what the walk function
 ;;; has requested.
@@ -108,21 +112,21 @@
 ;;; For inspiration, see SBCL's walk.lisp and their template
 ;;; system.
 
-(define semen-walk-embed-result (gensym)
+(define walk-embed-result (gensym)
   ;; For cases when result is a list which must be embedded in the
   ;; form, e.g. when it returned from a macro
   )
 
-(define (semen-walk-form form walk-fn env)
+(define (walk-form form walk-fn env)
   (if (atom? form) form
       (let ((new-form (walk-fn form env)))
         (cond ((not (eq? form new-form))
-               (semen-walk-form new-form walk-fn env))
+               (walk-form new-form walk-fn env))
               (else
-               (let ((new-car (semen-walk-form (car new-form) walk-fn env))
-                     (new-cdr (semen-walk-form (cdr new-form) walk-fn env)))
+               (let ((new-car (walk-form (car new-form) walk-fn env))
+                     (new-cdr (walk-form (cdr new-form) walk-fn env)))
                  (cond ((and (pair? new-car)
-                             (eq? (car new-car) semen-walk-embed-result))
+                             (eq? (car new-car) walk-embed-result))
                         (append (cdr new-car) new-cdr))
                        (else
                         (recons new-form new-car new-cdr)))))))))
@@ -135,12 +139,12 @@
 ;;; Fn processing
 
 (define (process-fn sex-fn acc)
-  (let* ((expanded (semen-macro-expand sex-fn))
+  (let* ((expanded (macro-expand sex-fn))
          (env (make-hash-table))
          (processed
-          (semen-walk-form
+          (walk-form
            expanded
-           semen-fn-walker
+           fn-walker
            (begin
              (set! (hash-table-ref env :fn-name) (sex-fn-name expanded))
              (set! (hash-table-ref env :lambda-counter) 0)
@@ -150,23 +154,23 @@
     (cons processed
           (append (hash-table-ref env :lambda-aux-code) acc))))
 
-(define (semen-fn-walker form env)
+(define (fn-walker form env)
   (if (eq? 'lambda (car form))
-      (let ((lambda-name (semen-make-lambda-name (hash-table-ref env :fn-name)
-                                                 (hash-table-ref env :lambda-counter))))
+      (let ((lambda-name (make-lambda-name (hash-table-ref env :fn-name)
+                                           (hash-table-ref env :lambda-counter))))
         (set! (hash-table-ref env :lambda-aux-code)
-          (append (semen-make-aux-lambda-struct lambda-name form)
+          (append (make-aux-lambda-struct lambda-name form)
                   (hash-table-ref env :lambda-aux-code)))
         (set! (hash-table-ref env :lambda-counter)
           (+ (hash-table-ref env :lambda-counter) 1))
         lambda-name)
-    form))
+      form))
 
-(define (semen-make-lambda-name enclosing-fn-name counter)
+(define (make-lambda-name enclosing-fn-name counter)
   (string->symbol
    (fmt #f "__lambda_" counter "_" enclosing-fn-name)))
 
-(define (semen-make-aux-lambda-struct name form)
+(define (make-aux-lambda-struct name form)
   (match form
     (('lambda ret-type arglist captures . body)
      ;; Captures are ignored for now, but

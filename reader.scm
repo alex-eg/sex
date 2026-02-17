@@ -1,8 +1,5 @@
-(declare (unit sex-reader))
-
-(include "utils.macros.scm")
-
 (import
+  scheme
   (chicken base)
   (chicken io)
   (chicken pathname)
@@ -13,6 +10,8 @@
   brev-separate
   fmt)
 
+(import-syntax utils)
+
 (define (read-forms acc)
   (let ((r (read-with-source-info (current-input-port))))
     (if (eof-object? r) (reverse acc)
@@ -20,8 +19,8 @@
 
 (define (read-from-file file)
   (with-directory file
-    (with-input-from-file (pathname-strip-directory file)
-      (fn (read-forms (list))))))
+                  (with-input-from-file (pathname-strip-directory file)
+                    (fn (read-forms (list))))))
 
 (define (read-bracket port)
   (let loop ((c (read-char port))
@@ -40,24 +39,24 @@
 
 (define (read-raw-forms input-source)
   (let ((bracket-end (gensym)))
-   (set-read-syntax!
-    #\]
-    (lambda (port)
-      (when (= 0 (open-bracket-counter))
-        (error "Unmatched closing bracket"))
-      (open-bracket-counter (- (open-bracket-counter) 1))
-      bracket-end))
+    (set-read-syntax!
+     #\]
+     (lambda (port)
+       (when (= 0 (open-bracket-counter))
+         (error "Unmatched closing bracket"))
+       (open-bracket-counter (- (open-bracket-counter) 1))
+       bracket-end))
 
-   (set-read-syntax!
-    #\[
-    (lambda (port)
-      (open-bracket-counter (+ (open-bracket-counter) 1))
-      (let loop ((r (read port))
-                 (acc (list)))
-        (if (eq? r bracket-end)
-            (cons '¤ (reverse acc))
-            (loop (read port)
-                  (cons r acc)))))))
+    (set-read-syntax!
+     #\[
+     (lambda (port)
+       (open-bracket-counter (+ (open-bracket-counter) 1))
+       (let loop ((r (read port))
+                  (acc (list)))
+         (if (eq? r bracket-end)
+             (cons '¤ (reverse acc))
+             (loop (read port)
+                   (cons r acc)))))))
   (if (eq? input-source 'stdin)
       (read-forms (list))
       (read-from-file input-source)))

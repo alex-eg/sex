@@ -1,3 +1,5 @@
 *.o
+*.import.scm
+*.link
 sexc
 sex-tests

@@ -1,4 +1,5 @@
-(import (chicken port))
+(import (chicken port)
+        reader)
 
 (define-syntax reader-test
   (syntax-rules ()

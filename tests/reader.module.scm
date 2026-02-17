@@ -1,0 +1,3 @@
+(module reader
+    *
+  "../reader.scm")

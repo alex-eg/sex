@@ -1,0 +1,2 @@
+(module semen ()
+  "semen.scm")

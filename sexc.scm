@@ -1,12 +1,6 @@
-(declare (unit sexc)
-         (uses fmt-c-writer
-               sex-reader
-               utils
-               semen))
-
-(include "utils.macros.scm")
-
-(import brev-separate
+(import scheme
+        brev-separate
+        (chicken base)
         (chicken file)
         (chicken plist)
         (chicken pretty-print)
@@ -14,10 +8,16 @@
         (chicken process-context)
         (chicken port)
         fmt
+        fmt-c-writer
         getopt-long
+        sex-macros
+        sex-modules
+        reader
+        semen
         srfi-1                          ; list routines
         srfi-13
-        tree)
+        tree
+        utils)
 
 ;;; Main function facilities
 
@@ -32,9 +32,9 @@
                       (value #f)
                       (single-char #\c))
       (emit-c "Emit C code"
-                  (required #f)
-                  (value #f)
-                  (single-char #\C))
+              (required #f)
+              (value #f)
+              (single-char #\C))
       (public-interface "Get module's public interface"
                         (required #f)
                         (value #f))
@@ -86,10 +86,10 @@
 
 (define (emit-c-or-sex sex-forms output args)
   (write-to-file-or-stdout output
-   (lambda ()
-    (if (get-arg args 'macro-expand #f)
-        (map pp sex-forms)
-        (emit-c sex-forms)))))
+                           (lambda ()
+                             (if (get-arg args 'macro-expand #f)
+                                 (map pp sex-forms)
+                                 (emit-c sex-forms)))))
 
 (define (compile-to-file sex-forms output args)
   (let ((compiler (or (get-arg args 'c-compiler #f)
@@ -116,7 +116,7 @@
   (if (eq? input-source 'stdin)
       (semen-process raw-forms)
       (with-directory input-source
-        (semen-process raw-forms))))
+                      (semen-process raw-forms))))
 
 (define prelude
   '((include inttypes.h)

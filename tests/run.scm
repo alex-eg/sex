@@ -1,10 +1,4 @@
-(declare (uses fmt-c-writer
-               semen))
-
 (import
-  (chicken process)
-  (chicken process-context)
-  srfi-1
   test)
 
 (include "basic.scm")

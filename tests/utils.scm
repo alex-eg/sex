@@ -1,3 +1,5 @@
+(import utils)
+
 (test-group "utils"
 
   (test

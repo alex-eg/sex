@@ -1,21 +1,20 @@
-; Why `sex-modules`? Probably `modules` unit is reserved by chicken,
-; things start to break.
-(declare (unit sex-modules)
-         (uses sex-reader
-               utils))
-
-(import brev-separate
-        (chicken file)
-        (chicken load)
-        (chicken pathname)
-        (chicken process-context)
-        (chicken string)
-        fmt
-        srfi-1)
+(import
+  scheme
+  brev-separate
+  (chicken base)
+  (chicken file)
+  (chicken load)
+  (chicken pathname)
+  (chicken process-context)
+  (chicken string)
+  fmt
+  reader
+  srfi-1
+  utils)
 
 (define +persistent-module-paths+ (list))
 
-(define (get-public-forms module-list)
+(define (get-modules-public-forms module-list)
   ;; Module list is a list of symbols
   ;; How Sex handles modules:
   ;; For each module in a list, construct path, find module by path in
@@ -69,7 +68,7 @@
   (case (car form)
     ((pub)
      (case (cadr form)
-       ((fn) ; replace with prototype
+       ((fn)                 ; replace with prototype
         ;; fn type name (arg-list) (body)
         ;; 1    2   3       4 - we need first 4
         (cons (take (cdr form) 4) acc))

@@ -1,4 +1,5 @@
-(import srfi-69)
+(import srfi-69
+        semen)
 
 (define print-str-fn
   '(fn void print-str ((string s))
@@ -38,11 +39,11 @@
   (define (form-identity form env)
     form)
 
-  (test 'a (semen-walk-form 'a form-identity (make-hash-table)))
-  (test '(a b c) (semen-walk-form '(a b c) form-identity (make-hash-table)))
+  (test 'a (walk-form 'a form-identity (make-hash-table)))
+  (test '(a b c) (walk-form '(a b c) form-identity (make-hash-table)))
 
-  (test 'a (semen-macro-expand 'a))
-  (test '(a b c) (semen-macro-expand '(a b c)))
+  (test 'a (macro-expand 'a))
+  (test '(a b c) (macro-expand '(a b c)))
 
   (let ((sex-code-macro
          '((defmacro (x10 a)
