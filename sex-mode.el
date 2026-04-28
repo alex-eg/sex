@@ -51,7 +51,9 @@ All commands in `lisp-mode-shared-map' are inherited by this map.")
      ;; Keywords
      (list (concat "("
                    (regexp-opt '(
+                                 "begin"
                                  "case"
+                                 "default"
                                  "do"
                                  "if"
                                  "for"
@@ -83,6 +85,8 @@ All commands in `lisp-mode-shared-map' are inherited by this map.")
 (put 'union 'lisp-indent-function 'defun)
 (put 'var 'lisp-indent-function 0)
 (put 'import 'lisp-indent-function 1)
+(put 'switch 'lisp-indent-function 1)
+(put 'case 'lisp-indent-function 1)
 
 ;;;###autoload
 (define-derived-mode sex-mode lisp-data-mode "Sex"
