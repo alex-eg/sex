@@ -112,7 +112,7 @@
     (lambda (st)
       ((fmt-let 'op op
                 (if (and (c-op<= (fmt-op st) op)
-                         (not (vector? st)))
+                         (not (vector? x)))
                     (c-paren x)
                     x))
        st)))
