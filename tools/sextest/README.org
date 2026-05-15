@@ -1,0 +1,26 @@
+* Sextest
+A tool for testing Sex compiler by using test programs.
+The tools compiles test programs, then runs with provided
+input, checking the output and return code.
+
+* Test format
+The test program is just a regular Sex program, which may contain
+additional toplevel forms, to define compilation parameters, input to
+the program, and expected output and return code. Default value for
+compilation, input and output is an empty strings. For the return code
+it is 0.
+
+* Example
+some-test.sex:
+#+begin_src
+(compilation "-- -O2")
+(input "")
+(output "Hello world!")
+(return 123)
+
+(include stdio.h)
+
+(pub fn main () int
+  (puts "Hello World!")
+  (return 123))
+#+end_src

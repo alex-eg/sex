@@ -1,0 +1,178 @@
+(import scheme
+        brev-separate
+        (chicken base)
+        (chicken file)
+        (chicken io)
+        (chicken pathname)
+        (chicken port)
+        (chicken process)
+        (chicken process-context)
+        (chicken read-syntax)
+        (chicken syntax)
+        fmt
+        srfi-1)
+
+(define-syntax prog1
+  (syntax-rules ()
+    ((prog1 form . forms)
+     (let ((res form))
+       (begin . forms)
+       res))))
+
+(define-syntax with-directory
+  (syntax-rules ()
+    ((with-directory path form . forms)
+     (let ((current-dir (current-directory)))
+       (set-working-directory path)
+       (prog1
+        (begin form . forms)
+        (change-directory current-dir))))))
+
+(define (set-working-directory file)
+  (change-directory
+   (normalize-pathname
+    (if (absolute-pathname? file)
+        (pathname-directory file)
+        (make-absolute-pathname
+         (current-directory)
+         (pathname-directory file))))))
+
+;;; TODO: use sexc reader code i.e. link with sex reader
+(define open-bracket-counter (make-parameter 0))
+
+(define (read-raw-forms input-source)
+  (let ((bracket-end (gensym)))
+    (set-read-syntax!
+     #\]
+     (lambda (port)
+       (when (= 0 (open-bracket-counter))
+         (error "Unmatched closing bracket"))
+       (open-bracket-counter (- (open-bracket-counter) 1))
+       bracket-end))
+
+    (set-read-syntax!
+     #\[
+     (lambda (port)
+       (open-bracket-counter (+ (open-bracket-counter) 1))
+       (let loop ((r (read port))
+                  (acc (list)))
+         (if (eq? r bracket-end)
+             (cons '¤ (reverse acc))
+             (loop (read port)
+                   (cons r acc)))))))
+  (read-from-file input-source))
+
+(define (read-from-file file)
+  (with-directory file
+    (with-input-from-file (pathname-strip-directory file)
+      (fn (read-forms (list))))))
+
+(define (read-forms acc)
+  (let ((r (read-with-source-info (current-input-port))))
+    (if (eof-object? r) (reverse acc)
+        (read-forms (cons r acc)))))
+
+(define (print-help)
+  (fmt #t "Usage: sextest ./path/to/test-file.sex\n"))
+
+(define (process-file target-path)
+  (let ((contents (read-raw-forms target-path)))
+    (foldl (lambda (acc elt)
+             (case (car elt)
+               ((compilation input output return)
+                (cons
+                 (append (car acc) (list elt))
+                 (cdr acc)))
+               (else
+                (cons
+                 (car acc)
+                 (append (cdr acc) (list elt))))))
+           (cons (list) (list))
+           contents)))
+
+(define (compile src flags)
+  (let ((compiler (or (get-environment-variable "SEXC")
+                      ;; TODO: pass compiler in args
+                      ;; (get-arg args 'sex-compiler #f)
+                      "sexc"))
+        (compiled-file (create-temporary-file)))
+    (call-with-values
+        (fn
+         (process compiler
+                  (append (list "-o" compiled-file)
+                          flags)))
+      (lambda (out-port in-port pid)
+        (with-output-to-port in-port
+          (fn (map (fn (fmt #t x)) src)))
+        (close-output-port in-port)
+
+        (call-with-values
+            (fn (process-wait pid))
+          (lambda (pid exited retcode)
+            (if (= 0 retcode)
+                compiled-file
+                #f)))))))
+
+(define (run-and-check file in out ret)
+  (call-with-values
+      (fn (process file))
+    (lambda (out-port in-port pid)
+      (when in
+        (with-output-to-port in-port
+          (fn (map (fn (fmt #t x))
+                   (cdr in))))
+        (close-output-port in-port))
+      (let ((out-lines
+             (with-input-from-port out-port
+               (fn
+                (let loop ((line (read-line))
+                           (lines (list)))
+                  (if (eof-object? line)
+                      (reverse lines)
+                      (loop (read-line)
+                            (cons line lines)))))))
+            (ret-code
+             (call-with-values
+                 ;; TODO: what if the program hangs
+                 ;; we need some kind of timeout mechanism
+                 (fn
+                  (process-wait pid))
+               (lambda (pid exited retcode)
+                 retcode))))
+        (and
+         (if (not (= ret-code (cadr ret)))
+             (begin
+               (fmt #t "Retcode differs. Got " ret-code ", expected " (cadr ret) nl)
+               #f)
+             #t)
+
+         (if (not (equal? out-lines (cdr out)))
+             (begin
+               (fmt #t "Output differs. Got " out-lines " expected " (cdr out) nl)
+               #f)
+             #t))))))
+
+(define (main)
+  (let ((args (command-line-arguments)))
+    (if (not (= 1 (length args)))
+        (print-help)
+        (let ((settings-and-src
+               (process-file (first args))))
+          (let ((settings (car settings-and-src))
+                (src (cdr settings-and-src)))
+            (let ((compiled-file (compile src (assoc 'compile settings))))
+              (unless compiled-file
+                (fmt #t "Compilation failed." nl)
+                (exit 1))
+              (if (run-and-check
+                       compiled-file
+                       (assoc 'input settings)
+                       (assoc 'output settings)
+                       (assoc 'return settings))
+                  (fmt #t "PASS" nl)
+                  (begin
+                    (fmt #t "FAIL" nl)
+                    (exit 2)))
+              (exit 0)))))))
+
+(main)

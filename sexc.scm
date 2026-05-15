@@ -155,7 +155,9 @@
          (return #f))
        (load-persistent-module-paths)
 
-       (sex-fmt-current-file (to-absolute-pathname input))
+       (if (eq? input 'stdin)
+           (sex-fmt-current-file "stdin")
+           (sex-fmt-current-file (to-absolute-pathname input)))
        (let* ((raw-forms (append prelude (read-raw-forms input)))
               (sex-forms (semantic-process-forms raw-forms input)))
          (if (or (get-arg args 'macro-expand #f)

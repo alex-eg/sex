@@ -1,0 +1,13 @@
+(input "Sextest")
+(output "Hello from Sex!" "What is your name?" "Hello, Sextest!")
+(return 255)
+
+(include stdio.h)
+
+(pub fn main ((argc int) (argv  [* const char])) int
+  (puts "Hello from Sex!")
+  (var name [char 512])
+  (puts "What is your name?")
+  (scanf "%s" (cast (& name) (* char)))
+  (printf "Hello, %s!\n" name)
+  (return 255))

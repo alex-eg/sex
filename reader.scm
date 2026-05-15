@@ -19,21 +19,8 @@
 
 (define (read-from-file file)
   (with-directory file
-                  (with-input-from-file (pathname-strip-directory file)
-                    (fn (read-forms (list))))))
-
-(define (read-bracket port)
-  (let loop ((c (read-char port))
-             (str (string)))
-    (cond ((char=? c #\])
-           (cons '¤
-                 (with-input-from-string str
-                   (fn (port-map identity read)))))
-          ((char=? c #\[)
-           (loop port (conc )))
-          (else
-           (loop (read-char port)
-                 (conc str c))))))
+    (with-input-from-file (pathname-strip-directory file)
+      (fn (read-forms (list))))))
 
 (define open-bracket-counter (make-parameter 0))
 
