@@ -10,6 +10,7 @@
         (chicken read-syntax)
         (chicken syntax)
         fmt
+        getopt-long
         srfi-1)
 
 (define-syntax prog1
@@ -73,7 +74,9 @@
         (read-forms (cons r acc)))))
 
 (define (print-help)
-  (fmt #t "Usage: sextest ./path/to/test-file.sex\n"))
+  (fmt #t "Usage: sextest [options] filename" nl
+       "Options:" nl
+       (usage opts-grammar) nl))
 
 (define (process-file target-path)
   (let ((contents (read-raw-forms target-path)))
@@ -90,11 +93,11 @@
            (cons (list) (list))
            contents)))
 
-(define (compile src flags)
-  (let ((compiler (or (get-environment-variable "SEXC")
-                      ;; TODO: pass compiler in args
-                      ;; (get-arg args 'sex-compiler #f)
-                      "sexc"))
+(define (compile src flags sexc)
+  (let ((compiler (or
+                   (and sexc (cdr sexc))
+                   (get-environment-variable "SEXC")
+                   "sexc"))
         (compiled-file (create-temporary-file)))
     (call-with-values
         (fn
@@ -152,27 +155,53 @@
                #f)
              #t))))))
 
+(define opts-grammar
+  `((sexc ,(fmt #f "Path to sexc compiler. Defaults to value of SEXC" nl
+                (pad 26) "environment variable, ot if it's empty, to sexc" nl )
+          (required #f)
+          (value #t))
+    (help "Show this help"
+          (required #f)
+          (value #f)
+          (single-char #\h))))
+
+(define (process-test-file sexc path)
+  (let* ((settings-and-src (process-file path))
+         (settings (car settings-and-src))
+         (src (cdr settings-and-src))
+         (compiled-file (compile src (assoc 'compile settings) sexc)))
+    (if (not compiled-file)
+        (begin (fmt #t "Failed to compile " path nl)
+               #f)
+        (if (run-and-check
+             compiled-file
+             (assoc 'input settings)
+             (assoc 'output settings)
+             (assoc 'return settings))
+            (begin (fmt #t ".")
+                   #t)
+            (begin (fmt #t ",")
+                   #f)))))
+
 (define (main)
-  (let ((args (command-line-arguments)))
-    (if (not (= 1 (length args)))
-        (print-help)
-        (let ((settings-and-src
-               (process-file (first args))))
-          (let ((settings (car settings-and-src))
-                (src (cdr settings-and-src)))
-            (let ((compiled-file (compile src (assoc 'compile settings))))
-              (unless compiled-file
-                (fmt #t "Compilation failed." nl)
-                (exit 1))
-              (if (run-and-check
-                       compiled-file
-                       (assoc 'input settings)
-                       (assoc 'output settings)
-                       (assoc 'return settings))
-                  (fmt #t "PASS" nl)
-                  (begin
-                    (fmt #t "FAIL" nl)
-                    (exit 2)))
-              (exit 0)))))))
+  (let ((args (getopt-long (command-line-arguments)
+                           opts-grammar)))
+    (when (assoc 'help args)
+      (print-help)
+      (exit 0))
+    (when (null? (cdr (assoc '@ args)))
+      (fmt #t "Missing target file" nl)
+      (print-help)
+      (exit 1))
+    (unless
+        (foldl and
+               #t
+               (map (fn (process-test-file (assoc 'sexc args) x))
+                    (cdr (assoc '@ args))))
+      ;; TODO: add more verbose and human readable output and reporting
+      (fmt #t nl)
+      (exit 2))
+    (fmt #t nl)
+    (exit 0)))
 
 (main)
