@@ -1,0 +1,50 @@
+(input)
+(output "Size of the list: 0"
+        "Size of the list: 2"
+        "3 4 "
+        "Size of the list: 2")
+(return 0)
+
+(include stdlib.h)
+(include stddef.h)
+(include stdio.h)
+
+(import list-macros)
+
+(struct foo
+  ((a-field float)
+   (b int)
+   (c (* const char))
+   (not (fn ((val bool)) bool))))
+
+(var f (struct foo))
+
+(list-T int)
+(make-list-T int #f)
+(add-value-list-T int #f)
+(length-list-T int #f)
+(is-empty-list-T int #f)
+
+(extern fn puk ((a int) (b float)) void)
+(pub fn baz () bool
+  (return true))
+
+(extern var i int)
+(var j int)
+(pub var k int)
+
+(pub fn main () int
+     (var l (* struct list-int) (make-list-int))
+     (printf "Size of the list: %lu\n" (length-list-int l))
+     (add-value-list-int l 3)
+     (add-value-list-int l 4)
+     (printf "Size of the list: %lu\n" (length-list-int l))
+     (list-for-each (struct list-int) l int v
+       (printf "%d " v))
+     (printf "\n")
+     (printf "Size of the list: %lu\n" (length-list-int l))
+     (return 0))
+
+(pub fn print-list ((l (* const struct list-int))) void
+     (list-for-each (const struct list-int) l int v (printf "%d " v))
+     (printf "\n"))

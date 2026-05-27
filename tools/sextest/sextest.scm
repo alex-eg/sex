@@ -166,6 +166,10 @@
           (single-char #\h))))
 
 (define (process-test-file sexc path)
+  (set-environment-variable! "SEX_MODULE_PATH"
+                             (normalize-pathname (make-absolute-pathname
+                                                  (current-directory)
+                                                  (pathname-directory path))))
   (let* ((settings-and-src (process-file path))
          (settings (car settings-and-src))
          (src (cdr settings-and-src))

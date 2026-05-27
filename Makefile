@@ -49,12 +49,24 @@ fmt-c-writer.o: fmt-c-writer.module.scm fmt-c-writer.scm sex-fmt-c.o utils.o
 sexc.o: sexc.module.scm sexc.scm fmt-c-writer.o sex-macros.o sex-modules.o reader.o semen.o utils.o
 	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) sexc.module.scm -o sexc.o -unit sexc -link fmt-c-writer,sex-macros,sex-modules,reader,semen,utils
 
+# Unit testing
 sex-tests:
-	$(MAKE) -C tests sex-tests
+	$(MAKE) -C ./tests sex-tests
 	cp ./tests/sex-tests ./
+
+sextest:
+	$(MAKE) -C ./tools/sextest sextest
+	cp ./tools/sextest/sextest .
+
+SEX_TEST_PROGRAMS = hello-world lists
+
+run-tests: sexc sex-tests sextest
+	./sex-tests && ./sextest --sexc=./sexc $(SEX_TEST_PROGRAMS:%=./tests/sex-programs/%.sex)
 
 clean:
 	rm -f $(OBJ) main.o
 	rm -f *.import.scm
 	rm -f *.link
-	rm -f sexc sex-tests
+	rm -f sexc sex-tests sextest
+
+.PHONY: clean run-tests
