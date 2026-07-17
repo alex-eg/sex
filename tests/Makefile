@@ -39,7 +39,7 @@ sexc.o: sexc.module.scm ../sexc.scm fmt-c-writer.o sex-macros.o sex-modules.o re
 	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) sexc.module.scm -o sexc.o -unit sexc -link fmt-c-writer,sex-macros,sex-modules,reader,semen,utils
 
 clean:
-	rm -f $(OBJ)
+	rm -f $(SEX_OBJ)
 	rm -f *.import.scm
 	rm -f *.link
 	rm -f sex-tests
