@@ -5,6 +5,8 @@
      list-split
      list-join
      recons
+     set-form-line!
+     form-line
      with-directory
      )
   "utils.scm")

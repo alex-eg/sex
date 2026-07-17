@@ -3,7 +3,8 @@
   (chicken base)
   (chicken pathname)
   (chicken process-context)
-  srfi-1)
+  srfi-1
+  srfi-69)
 
 (define-syntax prog1
   (syntax-rules ()
@@ -64,3 +65,18 @@
            (eq? new-cdr (cdr old-cons)))
       old-cons
       (cons new-car new-cdr)))
+
+;;; Source-location map.
+;;; Our hand-written reader records the source line of each form here,
+;;; keyed by the form's cons cell (eq?). This replaces CHICKEN's
+;;; read-with-source-info / get-line-number, which only works when
+;;; forms are produced by the built-in `read'. The key survives
+;;; semantic processing because `recons' preserves the original cons
+;;; cell for forms it does not structurally change.
+(define +form-lines+ (make-hash-table eq?))
+
+(define (set-form-line! form line)
+  (hash-table-set! +form-lines+ form line))
+
+(define (form-line form)
+  (hash-table-ref/default +form-lines+ form #f))

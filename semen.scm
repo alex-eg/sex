@@ -68,6 +68,7 @@
          ('extern 'var . _)) (process-global-var sex-form acc))
     (('include _) (cons sex-form acc))
     (('define . _) (cons sex-form acc))
+    (('comment . _) (cons sex-form acc))
 
     (('import . modules)
      (process-imports (get-modules-public-forms modules) acc))
@@ -138,8 +139,25 @@
 
 ;;; Fn processing
 
-(define (process-fn sex-fn acc)
-  (let* ((expanded (macro-expand sex-fn))
+(define (comment-form? f)
+  (and (pair? f) (eq? (car f) 'comment)))
+
+(define (strip-fn-header-comments fn-form)
+  ;; Remove comment forms from the function header
+  ;; ([pub|extern] fn name arglist rettype) so the positional accessors
+  ;; below are not shifted. Comments in the body are left in place as
+  ;; ordinary statements and preserved into the generated C.
+  (let ((header-count (if (memq (car fn-form) '(pub extern)) 5 4)))
+    (let loop ((form fn-form) (kept 0) (acc (list)))
+      (cond
+       ((null? form) (reverse acc))
+       ((= kept header-count) (append (reverse acc) form))
+       ((comment-form? (car form)) (loop (cdr form) kept acc))
+       (else (loop (cdr form) (+ kept 1) (cons (car form) acc)))))))
+
+(define (process-fn sex-fn-raw acc)
+  (let* ((sex-fn (strip-fn-header-comments sex-fn-raw))
+         (expanded (macro-expand sex-fn))
          (env (make-hash-table))
          (processed
           (walk-form

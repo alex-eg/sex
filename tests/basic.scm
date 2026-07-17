@@ -28,6 +28,11 @@
   (test 1 (atom-to-fmt-c 'true))
   (test 0 (atom-to-fmt-c 'false))
 
-  ;; make-field-access
-  (test 'a.b (make-field-access '(.b a)))
-  (test 'a.b.c (make-field-access '(.c a.b))))
+  ;; dot-access -> %. member-access directive (kebab-converted operands)
+  (test '(%. a b) (walk-expr '(dot-access a b)))
+  (test '(%. a b c) (walk-expr '(dot-access a b c)))
+  (test '(%. a_b c) (walk-expr '(dot-access a-b c)))
+
+  ;; comment -> %comment directive (rendered as /* ... */)
+  (test '(%comment " hi") (walk-expr '(comment " hi")))
+  (test '(%comment " hi") (process-toplevel-form '(comment " hi"))))

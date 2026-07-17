@@ -53,21 +53,13 @@
       (car type)
       type))
 
-(define (make-field-access form)
-  (assert
-   (= 2 (length form)) "Wrong field access format")
-  (unkebabify
-   (string->symbol
-    (fmt #f (cadr form) (car form)))))
+(define (comment-form? f)
+  (and (pair? f) (eq? (car f) 'comment)))
 
 (define (walk-generic-toplevel form)
   (cond ((atom? form) (atom-to-fmt-c form))
         ((list? form) (map walk-generic-toplevel form))
         (else (error "Malformed form " form))))
-
-(define (field-access-form? form)
-  (and (symbol? (car form))
-       (char=? #\. (string-ref (symbol->string (car form)) 0))))
 
 (define (walk-expr form)
   (match form
@@ -76,8 +68,11 @@
       (walk-expr (vector->list form))))
     ((? atom?)
      (atom-to-fmt-c form))
-    ((? field-access-form?)
-     (make-field-access form))
+    ;; (comment "text") -> /* text */. `%comment' is the fmt-c directive.
+    (('comment . text) (cons '%comment text))
+    ;; (dot-access obj field ...) -> obj.field... member access. `%.'
+    ;; is the fmt-c directive for the `.' operator (see sex-fmt-c).
+    (('dot-access . rest) (cons '%. (map walk-expr rest)))
     (('var . _) (walk-var form))
     (('cast expr type) (list '%cast
                              (walk-type type)
@@ -184,7 +179,7 @@
 
           ((var . type) (append (list (walk-type (maybe-unwrap-type type)))
                                 (list (walk-type var))))))
-       form))
+       (remove comment-form? form)))
 
 (define (walk-function form)
   ;; (fn ret-type name arglist body) -> normal function
@@ -197,7 +192,7 @@
   (map (fn
         (let ((type (walk-type (last x))))
           (cons type (map atom-to-fmt-c (drop-right x 1)))))
-       fields))
+       (remove comment-form? fields)))
 
 (define (walk-struct form)
   (match form
@@ -251,6 +246,7 @@
 
 (define (process-toplevel-form form)
   (match form
+    (('comment . text) (cons '%comment text))
     (('fn . _) (list 'static (walk-function form)))
     (('var . _) (list 'static (walk-var form)))
     (('extern . rest) (walk-extern rest))
@@ -262,10 +258,9 @@
     (else (walk-expr form))))
 
 (define (get-line-num form)
-  (let ((num (get-line-number form)))
-    (if (string? num)
-        (last (string-split num ":"))
-        #f)))
+  ;; Source line recorded by our reader (see utils' form-line), or #f
+  ;; for forms the reader did not produce (prelude, macro expansions).
+  (form-line form))
 
 (define sex-fmt-current-file (make-parameter "/dev/null"))
 (define sex-fmt-line-num (make-parameter 0))

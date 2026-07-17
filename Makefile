@@ -31,8 +31,8 @@ utils.o: utils.module.scm utils.scm
 sex-macros.o: sex-macros.module.scm sex-macros.scm
 	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) sex-macros.module.scm -o sex-macros.o -unit sex-macros
 
-reader.o: reader.module.scm reader.scm
-	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) reader.module.scm -o reader.o -unit reader
+reader.o: reader.module.scm reader.scm utils.o
+	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) reader.module.scm -o reader.o -unit reader -link utils
 
 sex-modules.o: sex-modules.module.scm sex-modules.scm reader.o utils.o
 	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) sex-modules.module.scm -o sex-modules.o -unit sex-modules -link reader,utils
@@ -58,7 +58,7 @@ sextest:
 	$(MAKE) -C ./tools/sextest sextest
 	cp ./tools/sextest/sextest .
 
-SEX_TEST_PROGRAMS = hello-world lists
+SEX_TEST_PROGRAMS = hello-world lists comments
 
 run-tests: sexc sex-tests sextest
 	./sex-tests && ./sextest --sexc=./sexc $(SEX_TEST_PROGRAMS:%=./tests/sex-programs/%.sex)
