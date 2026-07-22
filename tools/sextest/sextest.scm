@@ -7,71 +7,10 @@
         (chicken port)
         (chicken process)
         (chicken process-context)
-        (chicken read-syntax)
-        (chicken syntax)
         fmt
         getopt-long
+        reader                          ; read-raw-forms, shared with sexc
         srfi-1)
-
-(define-syntax prog1
-  (syntax-rules ()
-    ((prog1 form . forms)
-     (let ((res form))
-       (begin . forms)
-       res))))
-
-(define-syntax with-directory
-  (syntax-rules ()
-    ((with-directory path form . forms)
-     (let ((current-dir (current-directory)))
-       (set-working-directory path)
-       (prog1
-        (begin form . forms)
-        (change-directory current-dir))))))
-
-(define (set-working-directory file)
-  (change-directory
-   (normalize-pathname
-    (if (absolute-pathname? file)
-        (pathname-directory file)
-        (make-absolute-pathname
-         (current-directory)
-         (pathname-directory file))))))
-
-;;; TODO: use sexc reader code i.e. link with sex reader
-(define open-bracket-counter (make-parameter 0))
-
-(define (read-raw-forms input-source)
-  (let ((bracket-end (gensym)))
-    (set-read-syntax!
-     #\]
-     (lambda (port)
-       (when (= 0 (open-bracket-counter))
-         (error "Unmatched closing bracket"))
-       (open-bracket-counter (- (open-bracket-counter) 1))
-       bracket-end))
-
-    (set-read-syntax!
-     #\[
-     (lambda (port)
-       (open-bracket-counter (+ (open-bracket-counter) 1))
-       (let loop ((r (read port))
-                  (acc (list)))
-         (if (eq? r bracket-end)
-             (cons '¤ (reverse acc))
-             (loop (read port)
-                   (cons r acc)))))))
-  (read-from-file input-source))
-
-(define (read-from-file file)
-  (with-directory file
-    (with-input-from-file (pathname-strip-directory file)
-      (fn (read-forms (list))))))
-
-(define (read-forms acc)
-  (let ((r (read-with-source-info (current-input-port))))
-    (if (eof-object? r) (reverse acc)
-        (read-forms (cons r acc)))))
 
 (define (print-help)
   (fmt #t "Usage: sextest [options] filename" nl
