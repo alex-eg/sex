@@ -69,4 +69,4 @@ clean:
 	rm -f *.link
 	rm -f sexc sex-tests sextest
 
-.PHONY: clean run-tests
+.PHONY: clean run-tests sex-tests sextest
