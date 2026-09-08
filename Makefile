@@ -58,7 +58,7 @@ sextest:
 	$(MAKE) -C ./tools/sextest sextest
 	cp ./tools/sextest/sextest .
 
-SEX_TEST_PROGRAMS = hello-world lists comments
+SEX_TEST_PROGRAMS = hello-world lists comments unicode
 
 run-tests: sexc sex-tests sextest
 	./sex-tests && ./sextest --sexc=./sexc $(SEX_TEST_PROGRAMS:%=./tests/sex-programs/%.sex)

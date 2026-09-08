@@ -1,4 +1,5 @@
 (import scheme
+        (scheme base)                   ; call/cc
         brev-separate
         (chicken base)
         (chicken file)
@@ -16,7 +17,6 @@
         semen
         srfi-1                          ; list routines
         srfi-13
-        tree
         utils)
 
 ;;; Main function facilities
@@ -98,19 +98,20 @@
         (out-file (if (eq? output 'default)
                       "a.out"
                       output)))
-    (call-with-values
-        (lambda ()
-          (process compiler (append (list "-o" out-file "-x" "c")
-                                    (if (get-arg args 'compile-object #f)
-                                        (list "-c")
-                                        (list))
-                                    (list "-")  ; read stdin
-                                    (get-c-compiler-args args))))
-      (lambda (out-port in-port pid)
-        (with-output-to-port in-port
-          (lambda () (emit-c sex-forms)))
-        (close-output-port in-port)
-        (process-wait pid)))))
+    ;; `process' hands back one record. Its port accessors are named
+    ;; from the *child's* point of view, so `process-input-port' is the
+    ;; port we write to: the C compiler's stdin.
+    (let* ((proc (process compiler (append (list "-o" out-file "-x" "c")
+                                           (if (get-arg args 'compile-object #f)
+                                               (list "-c")
+                                               (list))
+                                           (list "-")  ; read stdin
+                                           (get-c-compiler-args args))))
+           (cc-stdin (process-input-port proc)))
+      (with-output-to-port cc-stdin
+        (lambda () (emit-c sex-forms)))
+      (close-output-port cc-stdin)
+      (process-wait proc))))
 
 (define (semantic-process-forms raw-forms input-source)
   (if (eq? input-source 'stdin)

@@ -13,6 +13,14 @@
   (test '_this_->_member_ (unkebabify '-this-->-member-))
   (test '__->>> (unkebabify '--->>>))
 
+  ;; Non-ASCII identifiers must survive intact. The `regex' egg's
+  ;; string-substitute drops one trailing character per multi-byte
+  ;; character, which renames things silently -- the C still compiles,
+  ;; just under a different name than was written.
+  (test 'naïve_count (unkebabify 'naïve-count))
+  (test 'aï_b (unkebabify 'aï-b))
+  (test 'ïï (unkebabify 'ïï))
+
   ;; atom-to-fmt-c
   (test '%fun (atom-to-fmt-c 'fn))
   (test '%prototype (atom-to-fmt-c 'prototype))

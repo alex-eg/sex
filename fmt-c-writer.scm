@@ -2,19 +2,27 @@
 
 (import
   scheme
+  (scheme base)                         ; make-parameter
   (chicken base)
   (chicken string)
   (chicken syntax)
-  brev-separate
+  brev-separate                         ; fn, flatten
   fmt
   sex-fmt-c
   matchable
-  regex
+  (chicken irregex)                     ; unkebabify
   srfi-1                                ; lists
   srfi-13                               ; strings
-  srfi-39                               ; parameters
-  tree
   utils)
+
+;;; Map a procedure over every leaf of a tree, preserving its shape.
+;;; Was the `tree' egg, which has not been ported to CHICKEN 6. (Its
+;;; `flatten', also used here, comes from brev-separate.)
+(define (tree-map f tree)
+  (cond ((null? tree) (list))
+        ((pair? tree) (cons (tree-map f (car tree))
+                            (tree-map f (cdr tree))))
+        (else (f tree))))
 
 (define (unkebabify sym)
   (case sym
@@ -24,8 +32,7 @@
     ((-=) sym)
     (else
      (string->symbol
-      (string-substitute "-(?!>)" "_"
-                         (symbol->string sym) #t)))))
+      (irregex-replace/all "-(?!>)" (symbol->string sym) "_")))))
 
 (define (atom-to-fmt-c atom)
   (case atom

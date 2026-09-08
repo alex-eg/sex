@@ -12,6 +12,7 @@
 
 (import
   scheme
+  (scheme base)                         ; make-parameter
   (chicken base)
   (chicken pathname)
   utils)

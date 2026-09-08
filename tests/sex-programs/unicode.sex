@@ -1,0 +1,24 @@
+(input)
+(output "café 日本語 🍺" "café1" "naïve: 3")
+(return 0)
+
+;;; Non-ASCII string literals and identifiers.
+;;;
+;;; Two things are pinned here. First, a character outside printable
+;;; ASCII must reach the C compiler as the UTF-8 bytes it was written
+;;; as. Octal escapes are used because C's \x escape swallows every
+;;; following hex digit: "café1" is the case that catches it, since a
+;;; hex escape would run "\xc3\xa9" into the "1" and produce a value out
+;;; of range for a char. Second, a kebab-case identifier containing
+;;; non-ASCII characters must survive unkebabify intact -- getting this
+;;; wrong truncates the name silently, and the program still compiles
+;;; and runs, just under a different name than the one written.
+
+(include stdio.h)
+
+(pub fn main () int
+  (puts "café 日本語 🍺")
+  (puts "café1")
+  (var naïve-count int 3)
+  (printf "naïve: %d\n" naïve-count)
+  (return 0))

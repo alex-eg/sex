@@ -33,6 +33,7 @@
 
   (import
     scheme
+    (scheme base)                       ; string->utf8, bytevector accessors
     (chicken base)
     fmt
     srfi-1
@@ -138,7 +139,31 @@
           (case n
             ((7) "\\a") ((8) "\\b") ((9) "\\t") ((10) "\\n")
             ((11) "\\v") ((12) "\\f") ((13) "\\r")
-            (else (string-append "\\x" (number->string (char->integer c) 16)))))))
+            (else (c-octal-escapes c))))))
+
+  ;; A character outside printable ASCII, as one three-digit octal escape
+  ;; per UTF-8 byte.
+  ;;
+  ;; MODIFIED FROM UPSTREAM fmt-c, which emits "\x" plus the hex of the
+  ;; character. C's \x escape consumes *every* following hex digit, so
+  ;; "\xc3\xa91" is a single out-of-range value rather than two bytes
+  ;; followed by a '1'. Under CHICKEN 6 a character is a codepoint rather
+  ;; than a byte, so the hex form additionally emits "\xe9" for a lone
+  ;; "e-acute" -- not valid UTF-8 -- and "\x65e5" for anything above the
+  ;; Latin-1 range, which does not compile at all. Octal escapes are
+  ;; capped at three digits, so they always self-terminate.
+  (define (c-octal-escapes c)
+    (let* ((bytes (string->utf8 (string c)))
+           (len (bytevector-length bytes)))
+      (let loop ((i 0) (acc '()))
+        (if (= i len)
+            (apply string-append (reverse acc))
+            (loop (+ i 1)
+                  (cons (let ((oct (number->string (bytevector-u8-ref bytes i) 8)))
+                          (string-append "\\"
+                                         (make-string (- 3 (string-length oct)) #\0)
+                                         oct))
+                        acc))))))
 
   (define (c-format-number x)
     (if (and (integer? x) (exact? x))

@@ -15,11 +15,11 @@ jobs:
     - uses: actions/checkout@v3
     - name: Install chicken
       run: |
-        wget -N https://code.call-cc.org/releases/5.4.0/chicken-5.4.0.tar.gz
-        tar zxf chicken-5.4.0.tar.gz
+        wget -N https://code.call-cc.org/releases/6.0.0/chicken-6.0.0.tar.gz
+        tar zxf chicken-6.0.0.tar.gz
         sudo apt install -y make
-        make -C chicken-5.4.0 PLATFORM=linux
-        sudo make -C chicken-5.4.0 PLATFORM=linux install
+        make -C chicken-6.0.0 PLATFORM=linux
+        sudo make -C chicken-6.0.0 PLATFORM=linux install
     - name: Install dependencies
       # FIXME: [project-local deps]: use venv or something
       # run: make deps

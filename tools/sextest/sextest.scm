@@ -38,27 +38,25 @@
                    (get-environment-variable "SEXC")
                    "sexc"))
         (compiled-file (create-temporary-file)))
-    (call-with-values
-        (fn
-         (process compiler
-                  (append (list "-o" compiled-file)
-                          flags)))
-      (lambda (out-port in-port pid)
-        (with-output-to-port in-port
-          (fn (map (fn (fmt #t x)) src)))
-        (close-output-port in-port)
-
-        (call-with-values
-            (fn (process-wait pid))
-          (lambda (pid exited retcode)
-            (if (= 0 retcode)
-                compiled-file
-                #f)))))))
+    ;; `process' returns one record; `process-input-port' is named from
+    ;; the child's side, so it is the port we write to.
+    (let* ((proc (process compiler (append (list "-o" compiled-file) flags)))
+           (sexc-stdin (process-input-port proc)))
+      (with-output-to-port sexc-stdin
+        (fn (map (fn (fmt #t x)) src)))
+      (close-output-port sexc-stdin)
+      (call-with-values
+          (fn (process-wait proc))
+        (lambda (pid exited retcode)
+          (if (= 0 retcode)
+              compiled-file
+              #f))))))
 
 (define (run-and-check file in out ret)
-  (call-with-values
-      (fn (process file))
-    (lambda (out-port in-port pid)
+  (let* ((proc (process file))
+         (out-port (process-output-port proc))   ; the program's stdout
+         (in-port  (process-input-port proc)))   ; the program's stdin
+    (let ()
       (when in
         (with-output-to-port in-port
           (fn (map (fn (fmt #t x))
@@ -78,7 +76,7 @@
                  ;; TODO: what if the program hangs
                  ;; we need some kind of timeout mechanism
                  (fn
-                  (process-wait pid))
+                  (process-wait proc))
                (lambda (pid exited retcode)
                  retcode))))
         (and
@@ -137,7 +135,7 @@
       (print-help)
       (exit 1))
     (unless
-        (foldl and
+        (foldl (lambda (a b) (and a b))
                #t
                (map (fn (process-test-file (assoc 'sexc args) x))
                     (cdr (assoc '@ args))))
