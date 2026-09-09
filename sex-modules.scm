@@ -71,9 +71,9 @@
        ((fn)                 ; replace with prototype
         ;; fn type name (arg-list) (body)
         ;; 1    2   3       4 - we need first 4
-        (cons (take (cdr form) 4) acc))
+        (cons (copy-form-source! form (take (cdr form) 4)) acc))
        ((define defmacro import include struct typedef union var)
-        (cons (cdr form) acc))
+        (cons (copy-form-source! form (cdr form)) acc))
        (else (error "Pub what? " (cadr form)))))
     (else acc)))
 

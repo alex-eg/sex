@@ -5,8 +5,13 @@
      list-split
      list-join
      recons
-     set-form-line!
+     current-source-file
+     set-form-source!
+     form-source
+     form-file
      form-line
+     copy-form-source!
+     stamp-form-source!
      with-directory
      )
   "../../utils.scm")

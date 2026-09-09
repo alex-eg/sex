@@ -15,14 +15,61 @@
   srfi-13                               ; strings
   utils)
 
-;;; Map a procedure over every leaf of a tree, preserving its shape.
-;;; Was the `tree' egg, which has not been ported to CHICKEN 6. (Its
-;;; `flatten', also used here, comes from brev-separate.)
+;;; egg `tree' not ported to CHICKEN 6 yet
 (define (tree-map f tree)
   (cond ((null? tree) (list))
         ((pair? tree) (cons (tree-map f (car tree))
                             (tree-map f (cdr tree))))
         (else (f tree))))
+
+;;; How much #line information to emit:
+;;;
+;;;   statement -- before every statement.
+;;;   toplevel  -- one directive per toplevel form.
+;;;   none      -- none at all, for reading -C output by eye.
+(define sex-line-directives (make-parameter 'statement))
+
+(define (anchor-statements?)
+  (eq? (sex-line-directives) 'statement))
+
+(define (line-directive src)
+  ;; `%line' is fmt-c's #line directive. cpp-line concatenates its
+  ;; second argument verbatim, so the file name arrives already quoted.
+  `(%line ,(cdr src) ,(fmt #f #\" (car src) #\")))
+
+(define (walk-body stmts)
+  "Walk a statement list, re-anchoring each statement that has a known
+source location. Only statement positions may be walked this way: a
+#line inside an expression is a C syntax error."
+  (if (anchor-statements?)
+      (append-map (lambda (s)
+                    (let ((src (form-source s)))
+                      (if src
+                          (list (line-directive src) (walk-expr s))
+                          (list (walk-expr s)))))
+                  stmts)
+      (map walk-expr stmts)))
+
+(define (walk-stmt s)
+  "A statement in a slot that holds exactly one form -- an `if' arm.
+Splicing is not possible there, since c-if reads anything past the arm
+as an `else if' chain, so the anchor and the statement are wrapped in
+`%begin': a statement sequence that emits no braces of its own (the
+surrounding c-block supplies them)."
+  (let ((src (and (pair? s) (anchor-statements?) (form-source s))))
+    (if src
+        `(%begin ,(line-directive src) ,(walk-expr s))
+        (walk-expr s))))
+
+(define (walk-if-clauses clauses)
+  "(test stmt test stmt ... [else-stmt]) -- tests stay expressions."
+  (let loop ((cs clauses) (acc (list)))
+    (cond ((null? cs) (reverse acc))
+          ((null? (cdr cs))                    ; trailing else statement
+           (reverse (cons (walk-stmt (car cs)) acc)))
+          (else (loop (cddr cs)
+                      (cons (walk-stmt (cadr cs))
+                            (cons (walk-expr (car cs)) acc)))))))
 
 (define (unkebabify sym)
   (case sym
@@ -90,6 +137,28 @@
     (('c-or . rest) (apply c-or (map walk-expr rest)))
     (('c-bit-or . rest) (apply c-bit-or (map walk-expr rest)))
     (('c-bit-or= . rest) (apply c-bit-or= (map walk-expr rest)))
+
+    ;; Statement positions. These are the only places a #line may go,
+    ;; and each is spliced or wrapped according to what the
+    ;; corresponding fmt-c procedure accepts.
+    (('begin . stmts) (cons '%block-begin (walk-body stmts)))
+    (('if . clauses) (cons 'if (walk-if-clauses clauses)))
+    (('while test . body)
+     (cons* 'while (walk-expr test) (walk-body body)))
+    (('for init test step . body)
+     (cons* 'for (walk-expr init) (walk-expr test) (walk-expr step)
+            (walk-body body)))
+    ;; No anchor *between* switch clauses: c-switch requires every clause
+    ;; to be a case/default form and errors on anything else. The clause
+    ;; bodies are anchored from inside, which is what a debugger steps
+    ;; onto -- a `case' label is not a statement.
+    (('switch e . clauses)
+     (cons* 'switch (walk-expr e) (map walk-expr clauses)))
+    (('case v . body) (cons* 'case (walk-expr v) (walk-body body)))
+    (('case/fallthrough v . body)
+     (cons* 'case/fallthrough (walk-expr v) (walk-body body)))
+    (('default . body) (cons 'default (walk-body body)))
+
     (else (map walk-expr form))))
 
 (define (walk-var form)
@@ -160,7 +229,7 @@
        ,(atom-to-fmt-c name)
        ,(walk-arglist args)
        .
-       ,(walk-expr maybe-body)))))
+       ,(walk-body maybe-body)))))
 
 ;;; TODO: isn't there a better way?
 (define (is-probably-type form)
@@ -264,22 +333,14 @@
     (('define name . rest) `(%define ,(atom-to-fmt-c name) ,@rest))
     (else (walk-expr form))))
 
-(define (get-line-num form)
-  ;; Source line recorded by our reader (see utils' form-line), or #f
-  ;; for forms the reader did not produce (prelude, macro expansions).
-  (form-line form))
-
-(define sex-fmt-current-file (make-parameter "/dev/null"))
-(define sex-fmt-line-num (make-parameter 0))
-
-(define (line-directive-string)
-  (fmt #f #\# "line " (sex-fmt-line-num) " " #\" (sex-fmt-current-file) #\"))
-
 (define (emit-c sex-forms)
   (for-each (lambda (form)
-              (let ((start-line (get-line-num form)))
-                (when start-line
-                  (sex-fmt-line-num start-line)
-                  (fmt #t (line-directive-string) nl)))
+              ;; Forms the reader did not produce -- the prelude, and
+              ;; anything a macro built that we could not attribute --
+              ;; have no location and get no directive.
+              (let ((src (and (not (eq? (sex-line-directives) 'none))
+                              (form-source form))))
+                (when src
+                  (fmt #t (c-expr (line-directive src)))))
               (fmt #t (c-expr (process-toplevel-form form)) nl))
             sex-forms))

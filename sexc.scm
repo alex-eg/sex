@@ -50,7 +50,14 @@
                     (pad padding) "If -E or -m options are provided, defaults to stdout")
               (required #f)
               (value #t)
-              (single-char #\o)))))
+              (single-char #\o))
+      (line-directives
+       ,(fmt #f "How much #line information to emit: statement (default)," nl
+             (pad padding) "toplevel, or none. `statement' is what makes a debugger" nl
+             (pad padding) "land on the right source line; `none' is for reading -C" nl
+             (pad padding) "output by eye")
+       (required #f)
+       (value #t)))))
 
 (define (print-help)
   (fmt #t "Usage: sexc [options] filename [-- options-for-c-compiler]\n")
@@ -71,6 +78,13 @@
 
 (define (get-c-compiler-args args)
   (filter (fn (string-prefix? "-" x)) (get-rest-args args)))
+
+(define (line-directives-arg args)
+  (let ((v (get-arg args 'line-directives "statement")))
+    (cond ((equal? v "statement") 'statement)
+          ((equal? v "toplevel") 'toplevel)
+          ((equal? v "none") 'none)
+          (else (error "--line-directives must be statement, toplevel or none, got" v)))))
 
 (define (get-input-file args)
   (let ((rest-args (get-rest-args args)))
@@ -156,9 +170,14 @@
          (return #f))
        (load-persistent-module-paths)
 
-       (if (eq? input 'stdin)
-           (sex-fmt-current-file "stdin")
-           (sex-fmt-current-file (to-absolute-pathname input)))
+       ;; The file name in a #line directive now comes from the form's
+       ;; own recorded location, so imported modules report themselves
+       ;; rather than the unit that imported them
+       (sex-line-directives (line-directives-arg args))
+       (when (and (get-arg args 'emit-c #f)
+                  (not (get-arg args 'line-directives #f)))
+         (sex-line-directives 'none))
+
        (let* ((raw-forms (append prelude (read-raw-forms input)))
               (sex-forms (semantic-process-forms raw-forms input)))
          (if (or (get-arg args 'macro-expand #f)

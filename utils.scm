@@ -1,5 +1,6 @@
 (import
   scheme
+  (scheme base)                         ; make-parameter
   (chicken base)
   (chicken pathname)
   (chicken process-context)
@@ -64,19 +65,53 @@
   (if (and (eq? new-car (car old-cons))
            (eq? new-cdr (cdr old-cons)))
       old-cons
-      (cons new-car new-cdr)))
+      ;; A rebuilt cell is still the same source form, so it keeps the
+      ;; same location
+      (copy-form-source! old-cons (cons new-car new-cdr))))
 
 ;;; Source-location map.
-;;; Our hand-written reader records the source line of each form here,
-;;; keyed by the form's cons cell (eq?). This replaces CHICKEN's
-;;; read-with-source-info / get-line-number, which only works when
-;;; forms are produced by the built-in `read'. The key survives
-;;; semantic processing because `recons' preserves the original cons
-;;; cell for forms it does not structurally change.
-(define +form-lines+ (make-hash-table eq?))
+;;; Our hand-written reader records the source location of each form
+;;; here, keyed by the form's cons cell (eq?). This replaces CHICKEN's
+;;; read-with-source-info / get-line-number, which only works when forms
+;;; are produced by the built-in `read'.
+;;;
+;;; A location is (file . line). The file matters because imported
+;;; modules paste their public forms into the current unit: those forms
+;;; originate in another file and must be reported as such
+(define +form-sources+ (make-hash-table eq?))
 
-(define (set-form-line! form line)
-  (hash-table-set! +form-lines+ form line))
+;;; The file `parse-all' is currently reading. Bound by the reader
+(define current-source-file (make-parameter "<unknown>"))
+
+(define (set-form-source! form file line)
+  (hash-table-set! +form-sources+ form (cons file line)))
+
+(define (form-source form)
+  (hash-table-ref/default +form-sources+ form #f))
+
+(define (form-file form)
+  (let ((src (form-source form)))
+    (and src (car src))))
 
 (define (form-line form)
-  (hash-table-ref/default +form-lines+ form #f))
+  (let ((src (form-source form)))
+    (and src (cdr src))))
+
+(define (copy-form-source! from to)
+  "Give TO the location of FROM, if FROM has one. Returns TO, so it can
+wrap a form-building expression."
+  (let ((src (form-source from)))
+    (when (and src (pair? to))
+      (hash-table-set! +form-sources+ to src)))
+  to)
+
+(define (stamp-form-source! form src)
+  "Give FORM and every subform that has none the location SRC. Used for
+macro expansions, which inherit the location of the call site the way a
+cpp macro does. Forms that already have a location keep it."
+  (when (and src (pair? form))
+    (unless (form-source form)
+      (hash-table-set! +form-sources+ form src))
+    (stamp-form-source! (car form) src)
+    (stamp-form-source! (cdr form) src))
+  form)

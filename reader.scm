@@ -34,6 +34,13 @@
 (define (peek port)
   (peek-char port))
 
+;;; Record where a form started. Called with the line of the opening
+;;; delimiter, sampled before it is consumed
+(define (stamp form line)
+  (when (pair? form)
+    (set-form-source! form (current-source-file) line))
+  form)
+
 (define (delimiter? c)
   (or (eof-object? c)
       (char-whitespace? c)
@@ -69,11 +76,19 @@
   (let ((c (peek port)))
     (cond
      ((eof-object? c) c)
-     ((char=? c #\() (get-ch port) (read-list port close-paren))
-     ((char=? c #\[) (get-ch port) (cons '¤ (read-list port close-bracket)))
+     ((char=? c #\()
+      (let ((line (current-line)))
+        (get-ch port)
+        (stamp (read-list port close-paren) line)))
+     ((char=? c #\[)
+      (let ((line (current-line)))
+        (get-ch port)
+        (stamp (cons '¤ (read-list port close-bracket)) line)))
      ((char=? c #\)) (get-ch port) close-paren)
      ((char=? c #\]) (get-ch port) close-bracket)
-     ((char=? c #\;) (read-comment port))
+     ((char=? c #\;)
+      (let ((line (current-line)))
+        (stamp (read-comment port) line)))
      ((char=? c #\") (read-string-lit port))
      ((char=? c #\') (get-ch port) (list 'quote (read-datum port)))
      ((char=? c #\`) (get-ch port) (list 'quasiquote (read-datum port)))
@@ -239,8 +254,7 @@
   (parameterize ((current-line 1))
     (let loop ((acc (list)))
       (skip-whitespace port)
-      (let ((line (current-line))
-            (tok (next-token port)))
+      (let ((tok (next-token port)))
         (cond
          ((eof-object? tok) (reverse acc))
          ((or (eq? tok close-paren)
@@ -249,18 +263,22 @@
          ((eq? tok dot-token)
           (error "Unexpected . at top level"))
          (else
-          (when (pair? tok)
-            (set-form-line! tok line))
           (loop (cons tok acc))))))))
 
 ;;; Entry point: read all forms from a file, or from the current input
 ;;; port when the source is 'stdin
 (define (read-from-file file)
-  (with-directory file
-    (with-input-from-file (pathname-strip-directory file)
-      (lambda () (parse-all (current-input-port))))))
+  ;; Resolve the name before with-directory moves us, so an imported
+  ;; module's forms carry that module's path rather than the importer's
+  (let ((source-file (to-absolute-pathname file)))
+    (with-directory file
+      (with-input-from-file (pathname-strip-directory file)
+        (lambda ()
+          (parameterize ((current-source-file source-file))
+            (parse-all (current-input-port))))))))
 
 (define (read-raw-forms input-source)
   (if (eq? input-source 'stdin)
-      (parse-all (current-input-port))
+      (parameterize ((current-source-file "stdin"))
+        (parse-all (current-input-port)))
       (read-from-file input-source)))

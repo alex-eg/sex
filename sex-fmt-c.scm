@@ -845,8 +845,7 @@
 
   (define (c-label name)
     (lambda (st)
-      (let ((indent (make-space (max 0 (- (fmt-col st) 2)))))
-        ((cat fl indent name ":" fl) st))))
+      ((cat name ":" fl) st)))
 
   (define c-break
     (c-wrap-stmt (dsp "break")))

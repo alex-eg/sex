@@ -1,3 +1,3 @@
 (module fmt-c-writer (emit-c
-                      sex-fmt-current-file)
+                      sex-line-directives)
   "fmt-c-writer.scm")

@@ -47,10 +47,15 @@
   ;;
   ;; Single form we just cons to the top of rest-forms, but multiple
   ;; forms have to be appended to the rest-forms.
-  (let ((res (apply-macro macro-form)))
+  (let ((res (apply-macro macro-form))
+        (src (form-source macro-form)))
+    ;; An expansion is fresh structure with no location of its own. Give
+    ;; it the call site's, the way cpp attributes a macro body to where
+    ;; the macro was used
     (if (list? (car res))
-        (append res rest-forms)
-        (cons res rest-forms))))
+        (append (map (lambda (f) (stamp-form-source! f src)) res)
+                rest-forms)
+        (cons (stamp-form-source! res src) rest-forms))))
 
 (define (match-sex-form sex-form acc)
   (match sex-form
@@ -78,7 +83,7 @@
 
     ((or ('typedef new-type target)
          ('pub 'typedef new-type target))
-     (process-typedef new-type target acc))
+     (process-typedef sex-form new-type target acc))
 
     (else (assert #f (fmt #f "Unknown top level form " sex-form)))))
 
@@ -134,8 +139,8 @@
 
 ;;; Typdef
 
-(define (process-typedef new-type target acc)
-  (cons `(typedef ,target ,new-type) acc))
+(define (process-typedef form new-type target acc)
+  (cons (copy-form-source! form `(typedef ,target ,new-type)) acc))
 
 ;;; Fn processing
 
@@ -148,12 +153,16 @@
   ;; below are not shifted. Comments in the body are left in place as
   ;; ordinary statements and preserved into the generated C.
   (let ((header-count (if (memq (car fn-form) '(pub extern)) 5 4)))
-    (let loop ((form fn-form) (kept 0) (acc (list)))
-      (cond
-       ((null? form) (reverse acc))
-       ((= kept header-count) (append (reverse acc) form))
-       ((comment-form? (car form)) (loop (cdr form) kept acc))
-       (else (loop (cdr form) (+ kept 1) (cons (car form) acc)))))))
+    ;; This always rebuilds the list, so the location has to be carried
+    ;; over explicitly -- otherwise every function loses it
+    (copy-form-source!
+     fn-form
+     (let loop ((form fn-form) (kept 0) (acc (list)))
+       (cond
+        ((null? form) (reverse acc))
+        ((= kept header-count) (append (reverse acc) form))
+        ((comment-form? (car form)) (loop (cdr form) kept acc))
+        (else (loop (cdr form) (+ kept 1) (cons (car form) acc))))))))
 
 (define (process-fn sex-fn-raw acc)
   (let* ((sex-fn (strip-fn-header-comments sex-fn-raw))
@@ -193,7 +202,8 @@
     (('lambda ret-type arglist captures . body)
      ;; Captures are ignored for now, but
      ;; we'll need them for TODO: closures support
-     (process-fn `(fn ,ret-type ,name ,arglist ,@body) (list)))
+     (process-fn (copy-form-source! form `(fn ,ret-type ,name ,arglist ,@body))
+                 (list)))
     (else (assert #f (fmt #f "Malformed lambda " form)))))
 
 ;;; Structs
