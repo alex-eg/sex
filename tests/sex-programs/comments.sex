@@ -1,0 +1,13 @@
+(input)
+(output "start" "end")
+(return 0)
+
+;;; A top-level comment, preserved into the generated C.
+(include stdio.h)
+
+;; Another top-level comment, right before the function.
+(pub fn main () int
+  ;; a comment in statement position
+  (puts "start")
+  (puts "end") ; a trailing comment after a statement
+  (return 0))
