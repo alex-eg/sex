@@ -49,6 +49,12 @@ directory. Sex uses C under the hood, the default C compiler is ~cc~,
 but you can pass any using ~--c-compiler~ option, or by setting
 ~SEX_CC~ environment variable.
 
+Everything after ~--~ is handed to the C compiler exactly as written:
+
+#+begin_src shell
+sexc example/sdl3-triangle.sex -o triangle -- `pkg-config --cflags --libs sdl3` -framework OpenGL
+#+end_src
+
 ** Example
 An example of Sex source:
 #+begin_src scheme

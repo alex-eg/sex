@@ -16,7 +16,6 @@
         reader
         semen
         srfi-1                          ; list routines
-        srfi-13
         utils)
 
 ;;; Main function facilities
@@ -73,11 +72,23 @@
     (if arg (cdr arg)
         default)))
 
+;;; Everything before the first `--' is ours to parse, everything after
+;;; is handed to the C compiler verbatim
+
+(define (separator? a)
+  (string=? a "--"))
+
+(define (args-before-separator argv)
+  (take-while (complement separator?) argv))
+
+(define (args-after-separator argv)
+  (let ((tail (drop-while (complement separator?) argv)))
+    (if (null? tail)
+        (list)
+        (cdr tail))))
+
 (define (get-rest-args args)
   (cdr (assoc '@ args)))
-
-(define (get-c-compiler-args args)
-  (filter (fn (string-prefix? "-" x)) (get-rest-args args)))
 
 (define (line-directives-arg args)
   (let ((v (get-arg args 'line-directives "statement")))
@@ -105,7 +116,7 @@
                                  (map pp sex-forms)
                                  (emit-c sex-forms)))))
 
-(define (compile-to-file sex-forms output args)
+(define (compile-to-file sex-forms output args cc-args)
   (let ((compiler (or (get-arg args 'c-compiler #f)
                       (get-env-var "SEX_CC")
                       "cc"))
@@ -120,7 +131,7 @@
                                                (list "-c")
                                                (list))
                                            (list "-")  ; read stdin
-                                           (get-c-compiler-args args))))
+                                           cc-args)))
            (cc-stdin (process-input-port proc)))
       (with-output-to-port cc-stdin
         (lambda () (emit-c sex-forms)))
@@ -146,7 +157,9 @@
     (typedef i64 int64-t)))
 
 (define (main)
-  (let* ((raw-args (command-line-arguments))
+  (let* ((argv (command-line-arguments))
+         (raw-args (args-before-separator argv))
+         (cc-args (args-after-separator argv))
          (args (getopt-long raw-args
                             opts-grammar))
          (output (get-arg args 'output 'default))
@@ -185,4 +198,4 @@
              ;; Emit processed and macro-expanded sex code, or emit C code
              (emit-c-or-sex sex-forms output args)
              ;; Compile file!
-             (compile-to-file sex-forms output args)))))))
+             (compile-to-file sex-forms output args cc-args)))))))
