@@ -1,0 +1,18 @@
+;;; A module. Everything marked `pub' forms its public interface;
+;;; everything else is private to this file.
+;;;
+;;; Importing a module does not link it: it pastes the declarations, so
+;;; the compiled object still has to be handed to the C compiler. See
+;;; greet-app.sex.
+
+(include stdio.h)
+
+(pub var greet-count int 0)
+
+(pub fn greet ((name (* const char))) void
+  (++ greet-count)
+  (printf "hello, %s\n" name))
+
+;;; Not `pub': invisible to importers, and static in the generated C.
+(fn unused-helper () void
+  (printf "private\n"))

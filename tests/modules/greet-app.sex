@@ -1,0 +1,19 @@
+;;; Uses the greet module. Build both, then link them:
+;;;
+;;;   ./sexc example/greet.sex -c -o greet.o
+;;;   ./sexc example/greet-app.sex -o greet-app -- greet.o
+;;;
+;;; `(import greet)' pastes greet's public declarations here: `greet'
+;;; as a prototype and `greet-count' as an extern. Both keep external
+;;; linkage, so they refer to the one definition in greet.o rather than
+;;; to private copies.
+
+(include stdio.h)
+
+(import greet)
+
+(pub fn main () int
+  (greet "world")
+  (greet "sex")
+  (printf "%d greetings\n" greet-count)
+  (return 0))

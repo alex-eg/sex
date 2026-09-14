@@ -68,11 +68,14 @@
   (case (car form)
     ((pub)
      (case (cadr form)
-       ((fn)                 ; replace with prototype
-        ;; fn type name (arg-list) (body)
-        ;; 1    2   3       4 - we need first 4
-        (cons (copy-form-source! form (take (cdr form) 4)) acc))
-       ((define defmacro import include struct typedef union var)
+       ;; A function is reduced to a prototype and keeps its `pub', so
+       ;; the importing unit declares it with external linkage
+       ((fn)
+        (cons (copy-form-source! form (take form 5)) acc))
+       ;; A variable becomes an `extern' declaration
+       ((var)
+        (cons (copy-form-source! form (cons 'extern (take (cdr form) 3))) acc))
+       ((define defmacro import include struct typedef union)
         (cons (copy-form-source! form (cdr form)) acc))
        (else (sex-error form "pub must be followed by a definition" form))))
     (else acc)))

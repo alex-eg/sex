@@ -60,13 +60,18 @@ sextest:
 
 SEX_TEST_PROGRAMS = hello-world lists comments unicode
 
+# Multi-module linking is checked end to end; see tests/modules/Makefile.
+check-modules: sexc
+	@$(MAKE) --no-print-directory -C ./tests/modules check SEXC=../../sexc
+
 run-tests: sexc sex-tests sextest
-	./sex-tests && ./sextest --sexc=./sexc $(SEX_TEST_PROGRAMS:%=./tests/sex-programs/%.sex)
+	./sex-tests && ./sextest --sexc=./sexc $(SEX_TEST_PROGRAMS:%=./tests/sex-programs/%.sex) && $(MAKE) check-modules
 
 clean:
 	rm -f $(OBJ) main.o
 	rm -f *.import.scm
 	rm -f *.link
 	rm -f sexc sex-tests sextest
+	$(MAKE) -C ./tests/modules clean
 
-.PHONY: clean run-tests sex-tests sextest
+.PHONY: clean run-tests sex-tests sextest check-modules
