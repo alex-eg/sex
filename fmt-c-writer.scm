@@ -85,7 +85,7 @@ surrounding c-block supplies them)."
   (case atom
     ((fn) '%fun)
     ((prototype) '%prototype)
-    ((begin) '%block-begin)
+    ((do) '%block-begin)
     ((define) '%define)
     ((pointer) '%pointer)
     ((array) '%array)
@@ -141,7 +141,7 @@ surrounding c-block supplies them)."
     ;; Statement positions. These are the only places a #line may go,
     ;; and each is spliced or wrapped according to what the
     ;; corresponding fmt-c procedure accepts.
-    (('begin . stmts) (cons '%block-begin (walk-body stmts)))
+    (('do . stmts) (cons '%block-begin (walk-body stmts)))
     (('if . clauses) (cons 'if (walk-if-clauses clauses)))
     (('while test . body)
      (cons* 'while (walk-expr test) (walk-body body)))

@@ -51,7 +51,7 @@ All commands in `lisp-mode-shared-map' are inherited by this map.")
      ;; Keywords
      (list (concat "("
                    (regexp-opt '(
-                                 "begin"
+                                 "do"
                                  "case"
                                  "default"
                                  "do"

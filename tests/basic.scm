@@ -24,7 +24,7 @@
   ;; atom-to-fmt-c
   (test '%fun (atom-to-fmt-c 'fn))
   (test '%prototype (atom-to-fmt-c 'prototype))
-  (test '%block-begin (atom-to-fmt-c 'begin))
+  (test '%block-begin (atom-to-fmt-c 'do))
   (test '%define (atom-to-fmt-c 'define))
   (test '%pointer (atom-to-fmt-c 'pointer))
   (test '%array (atom-to-fmt-c 'array))

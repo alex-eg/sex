@@ -79,7 +79,7 @@
     "      (break))"                      ; 45
     "    (default"                        ; 46
     "      (putchar 120)))"               ; 47
-    "  (begin"                            ; 48
+    "  (do"                            ; 48
     "    (var bvar int 121)"              ; 49
     "    (putchar bvar))"                 ; 50
     "  (goto done)"                       ; 51
