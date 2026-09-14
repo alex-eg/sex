@@ -291,11 +291,26 @@ forms, and what remains."
     (else
      (type-convert-to-c form))))
 
+(define (has-pointer-star? form)
+  (and (pair? form)
+       (or (memq '* form)
+           (any has-pointer-star? (filter pair? form)))))
+
+;;; A `*' inside a sublist. Pointer chains are written flat -- (* * T),
+;;; never (* (* T))
+;;; Sublists that merely group, like (* (const struct suc)), contain
+;;; no `*' and are fine.
+(define (nested-pointer? type)
+  (and (pair? type)
+       (any has-pointer-star? (filter pair? type))))
+
 (define (type-convert-to-c type)
   ;; Our pointers to C pointers
   ;; int -> int
   ;; * const char -> const char *
   ;; const * const char -> const char * const
+  (when (nested-pointer? type)
+    (sex-error type "pointer chains are written flat, as (* * T), not nested" type))
   (if (atom? type) (atom-to-fmt-c type)
       (flatten
        (tree-map atom-to-fmt-c
