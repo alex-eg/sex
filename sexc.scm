@@ -123,20 +123,21 @@
         (out-file (if (eq? output 'default)
                       "a.out"
                       output)))
-    ;; `process' hands back one record. Its port accessors are named
-    ;; from the *child's* point of view, so `process-input-port' is the
-    ;; port we write to: the C compiler's stdin.
-    (let* ((proc (process compiler (append (list "-o" out-file "-x" "c")
-                                           (if (get-arg args 'compile-object #f)
-                                               (list "-c")
-                                               (list))
-                                           (list "-")  ; read stdin
-                                           cc-args)))
-           (cc-stdin (process-input-port proc)))
-      (with-output-to-port cc-stdin
+    ;; The generated C goes to a temporary .c file rather than the
+    ;; compiler's stdin
+    (let ((c-file (create-temporary-file "c")))
+      (with-output-to-file c-file
         (lambda () (emit-c sex-forms)))
-      (close-output-port cc-stdin)
-      (process-wait proc))))
+      (let ((proc (process compiler (append (list "-o" out-file)
+                                            (if (get-arg args 'compile-object #f)
+                                                (list "-c")
+                                                (list))
+                                            (list c-file)
+                                            cc-args))))
+        (call-with-values (lambda () (process-wait proc))
+          (lambda status
+            (delete-file* c-file)
+            (apply values status)))))))
 
 (define (semantic-process-forms raw-forms input-source)
   (if (eq? input-source 'stdin)
