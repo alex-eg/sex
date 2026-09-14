@@ -1,1 +1,3 @@
-(module sexc (main) "../sexc.scm")
+(module sexc
+    *
+  "../sexc.scm")

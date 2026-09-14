@@ -787,8 +787,32 @@
                           (fmt-join c-expr name ", ")
                           (c-expr name))))))
 
+  ;; MODIFIED FROM UPSTREAM fmt-c: parenthesise a binary operand.
+  ;;
+  ;; A cast binds tighter than every binary operator, so upstream's
+  ;; unparenthesised (cat "(" type ")" expr) silently casts only the
+  ;; first operand: (cast (* 2 (sizeof GLfloat)) (* void)) came out as
+  ;; `(void *)2 * sizeof(GLfloat)'. Unary operands -- &x, *p, -n,
+  ;; sizeof, calls, identifiers, literals -- are already
+  ;; unary-expressions and are left alone, so this changes nothing that
+  ;; was previously correct.
+  (define c-binary-operators
+    '(+ - * / % << >> < > <= >= == != & ^ && %and %or
+        = *= /= %= &= ^= <<= >>=))
+
+  (define (c-binary-expression? expr)
+    (and (pair? expr)
+         (memq (car expr) c-binary-operators)
+         (pair? (cdr expr))
+         (pair? (cddr expr))))         ; two or more operands
+
   (define (c-cast type expr)
-    (cat "(" (c-type type) ")" (c-expr expr)))
+    (cat "(" (c-type type) ")"
+         (if (c-binary-expression? expr)
+             ;; c-with-op stops the operand from parenthesising itself
+             ;; a second time inside the parens we just added.
+             (cat "(" (c-with-op 'paren (c-expr expr)) ")")
+             (c-expr expr))))
 
   (define (c-typedef type alias . o)
     (c-wrap-stmt
@@ -861,7 +885,12 @@
   (define (c-switch val . clauses)
     (c-reset-newline
      (lambda (st)
-       ((cat "switch (" (c-in-expr val) ")" (c-open-brace st)
+       ;; MODIFIED FROM UPSTREAM fmt-c: c-expr on the scrutinee.
+       ;; Upstream passes `val' straight to cat, which only works when
+       ;; it is an atom -- anything else (a member access, a call) is
+       ;; displayed as a raw s-expression instead of being rendered.
+       ;; c-while and c-for already do (c-in-test (c-expr check)).
+       ((cat "switch (" (c-in-expr (c-expr val)) ")" (c-open-brace st)
              (c-indent/switch st)
              (c-in-stmt (apply c-begin/aux #t (map c-switch-clause clauses))) fl
              (c-current-indent-string st) (c-close-brace st) fl)

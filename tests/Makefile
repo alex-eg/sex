@@ -6,7 +6,7 @@ MODULE_FLAGS = -emit-all-import-libraries -module-registration -c
 MODULES = utils sex-macros reader sex-modules semen sex-fmt-c fmt-c-writer sexc
 SEX_OBJ = $(MODULES:%=%.o)
 
-TESTS = basic semen reader fmt-c-writer utils line-directives
+TESTS = basic semen reader fmt-c-writer utils line-directives codegen args
 TEST_SRCS = $(TESTS:%=%.scm)
 
 sex-tests: run.scm $(TEST_SRCS) $(SEX_OBJ)
