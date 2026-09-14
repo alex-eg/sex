@@ -74,7 +74,7 @@
         (cons (copy-form-source! form (take (cdr form) 4)) acc))
        ((define defmacro import include struct typedef union var)
         (cons (copy-form-source! form (cdr form)) acc))
-       (else (error "Pub what? " (cadr form)))))
+       (else (sex-error form "pub must be followed by a definition" form))))
     (else acc)))
 
 (define (load-persistent-module-paths)

@@ -145,6 +145,12 @@ return Sex code.
   ...)
 #+end_src
 
+** Compile-time type information
+Sex has a number of type reflection features, aiming to help with
+macro writing. During the compilation, all type info is collected, and
+is accessible during macro expansion. This allows us to write things
+like providing auto serialization, adding meta information, and so on.
+
 ** Use an established environment for development
 As Sex is S-expressions, you always have Emacs with paredit as your
 best option.

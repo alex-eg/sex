@@ -12,6 +12,8 @@
      form-line
      copy-form-source!
      stamp-form-source!
+     form-location
+     sex-error
      with-directory
      )
   "../../utils.scm")

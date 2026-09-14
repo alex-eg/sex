@@ -175,7 +175,7 @@ forms, and what remains."
 (define (walk-generic-toplevel form)
   (cond ((atom? form) (atom-to-fmt-c form))
         ((list? form) (map walk-generic-toplevel form))
-        (else (error "Malformed form " form))))
+        (else (sex-error form "malformed form" form))))
 
 (define (walk-expr form)
   (match form
@@ -281,7 +281,7 @@ forms, and what remains."
     (('fn arglist ret-type)
      `(%fun ,(walk-type ret-type) ,(walk-arglist arglist)))
     (('fn . _)
-     (assert #f "Malformed function type form"))
+     (sex-error form "malformed function type" form))
 
     ;; Special case: nested structs/unions
     ((or ('struct . _)
@@ -363,7 +363,7 @@ forms, and what remains."
      `(,type ,(atom-to-fmt-c name)
              ,(process-struct-fields fields)
              . ,(tree-map atom-to-fmt-c attrs)))
-    (else (error "Malformed aggregate definition " form))))
+    (else (sex-error form "malformed aggregate definition" form))))
 
 (define (walk-enum form)
   (match form
@@ -379,7 +379,7 @@ forms, and what remains."
      (list 'extern (walk-function form)))
     (('var . _)
      (list 'extern (walk-var form)))
-    (else (error "Extern what?"))))
+    (else (sex-error form "extern must be followed by fn or var" form))))
 
 (define (walk-public form)
   (match form
@@ -400,7 +400,7 @@ forms, and what remains."
      ;; ignore here, used in generating public interface
      (process-toplevel-form form))
     (else
-     (error "Pub what?" (cadr form)))))
+     (sex-error form "pub must be followed by a definition" form))))
 
 (define (process-toplevel-form form)
   (match form

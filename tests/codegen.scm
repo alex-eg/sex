@@ -6,7 +6,8 @@
 ;;; the existing suite, because both need an operand shape that no
 ;;; earlier test program happened to use.
 
-(import (chicken port)
+(import (chicken condition)
+        (chicken port)
         (chicken string)
         srfi-13
         fmt-c-writer
@@ -27,6 +28,22 @@
 
 (define (emits? source fragment)
   (and (string-contains (sex->c source) fragment) #t))
+
+(define (error-message source)
+  "Compile SOURCE and return the error text as the user sees it --
+message plus arguments, the way CHICKEN prints it -- or #f if SOURCE
+compiles."
+  (handle-exceptions e
+      (with-output-to-string
+        (lambda ()
+          (display ((condition-property-accessor 'exn 'message) e))
+          (for-each (lambda (a) (display " ") (write a))
+                    ((condition-property-accessor 'exn 'arguments) e))))
+    (begin (sex->c source) #f)))
+
+(define (reports? source fragment)
+  (let ((m (error-message source)))
+    (and m (string-contains m fragment) #t)))
 
 (define (in-fn body)
   (string-append "(fn f ((a int) (b int)) void " body ")"))
@@ -153,4 +170,26 @@
     (test-assert "c-or is still accepted"
       (emits? (in-fn "(var x int (c-or a b))") "a || b"))
     (test-assert "c-bit-or is still accepted"
-      (emits? (in-fn "(var x int (c-bit-or a b))") "a | b"))))
+      (emits? (in-fn "(var x int (c-bit-or a b))") "a | b")))
+  ;; Diagnostics name also the place. Every form carries a (file
+  ;; . line), so an error can cite it
+  (test-group "errors cite the source location"
+    (test-assert "unknown toplevel form"
+      (reports? "(include stdio.h)\n(wat 1 2)" "codegen.sex:2: unknown top level form"))
+    (test-assert "the offending form is shown too"
+      (reports? "(include stdio.h)\n(wat 1 2)" "(wat 1 2)"))
+    (test-assert "pub with nothing to define"
+      (reports? "(pub 1)" "codegen.sex:1:")))
+
+  ;; A nested pointer chain used to silently lose a level:
+  ;; (var p (* (* char))) emitted `char *p'
+  (test-group "malformed types are rejected"
+    (test-assert "nested pointer chain"
+      (reports? (in-fn "(var p (* (* char)))") "pointer chains are written flat"))
+    (test-assert "and names the line"
+      (reports? "(pub fn f () void\n  (var p (* (* char))))" "codegen.sex:2:"))
+    ;; A sublist that only groups has no `*' in it and must still work.
+    (test-assert "grouping sublist still accepted"
+      (emits? (in-fn "(var s (* (const struct suc)) 0)") "const struct suc * s"))
+    (test-assert "flat chain still accepted"
+      (emits? (in-fn "(var q (* * const char) 0)") "const char * * q"))))

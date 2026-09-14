@@ -85,7 +85,7 @@
          ('pub 'typedef new-type target))
      (process-typedef sex-form new-type target acc))
 
-    (else (assert #f (fmt #f "Unknown top level form " sex-form)))))
+    (else (sex-error sex-form "unknown top level form" sex-form))))
 
 (define (process-imports module-public-forms acc)
   ;; Recursively process imports: register public macros, cons all
@@ -204,7 +204,7 @@
      ;; we'll need them for TODO: closures support
      (process-fn (copy-form-source! form `(fn ,ret-type ,name ,arglist ,@body))
                  (list)))
-    (else (assert #f (fmt #f "Malformed lambda " form)))))
+    (else (sex-error form "malformed lambda" form))))
 
 ;;; Structs
 

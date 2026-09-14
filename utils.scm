@@ -105,6 +105,21 @@ wrap a form-building expression."
       (hash-table-set! +form-sources+ to src)))
   to)
 
+;;; Diagnostics
+;;;
+;;; Every form carries a location now, so an error can say where the
+;;; wrong code was written
+(define (form-location form)
+  "\"file:line: \" for FORM, or \"\" when it has none"
+  (let ((src (form-source form)))
+    (if src
+        (string-append (car src) ":" (number->string (cdr src)) ": ")
+        "")))
+
+(define (sex-error form message . args)
+  "Signal an error about FORM, prefixed with where it was written."
+  (apply error (string-append (form-location form) message) args))
+
 (define (stamp-form-source! form src)
   "Give FORM and every subform that has none the location SRC. Used for
 macro expansions, which inherit the location of the call site the way a
