@@ -1,0 +1,37 @@
+(input)
+(output "box { w=3 h=4 label=wide }")
+(return 0)
+
+;;; A macro generating code from the type database: it is handed a
+;;; struct name, walks its fields with map-fields, and picks a printf
+;;; conversion per field with type-match. Exercises semen registering
+;;; the struct and the macro reading it back at expansion time.
+
+(include stdio.h)
+
+(defmacro (print-struct type-name)
+  (let ((printers
+         (map-fields type-name
+           (lambda (name type)
+             `(printf ,(string-append " " (symbol->string name) "="
+                                      (type-match type
+                                        (int            "%d")
+                                        ((* const char) "%s")
+                                        (else (error "print-struct: unsupported field type"
+                                                     name type))))
+                      (-> v ,name))))))
+    (if (not printers)
+        (error "print-struct: no such struct" type-name)
+        `(fn ,(cat 'print- type-name) ((v (* const struct ,type-name))) void
+           (printf ,(string-append (symbol->string type-name) " {"))
+           ,@printers
+           (printf " }\n")))))
+
+(struct box ((w int) (h int) (label (* const char))))
+
+(print-struct box)
+
+(pub fn main () int
+  (var b (struct box) #(3 4 "wide"))
+  (print-box (& b))
+  (return 0))

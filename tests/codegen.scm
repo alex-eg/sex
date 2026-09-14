@@ -171,6 +171,22 @@ compiles."
       (emits? (in-fn "(var x int (c-or a b))") "a || b"))
     (test-assert "c-bit-or is still accepted"
       (emits? (in-fn "(var x int (c-bit-or a b))") "a | b")))
+
+  ;; A `;' comment is a form. In a macro body `comment' is a no-op
+  ;; that swallows the comment itself. Inside a quasiquoted payload
+  ;; the same form is data, never evaluated, and reaches the writer
+  ;; intact
+  (test-group "comments in macros"
+    (test-assert "a comment in the payload reaches the C"
+      (emits? "(defmacro (m-kept) `(fn f () void\n ;; this survives\n (g)))\n(m-kept)"
+              "this survives"))
+    (test-assert "a comment about the macro does not"
+      (not (emits? "(defmacro (m-dropped)\n ;; this vanishes\n `(fn f () void (g)))\n(m-dropped)"
+                   "this vanishes")))
+    (test-assert "and the macro still expands"
+      (emits? "(defmacro (m-both)\n ;; about the macro\n `(fn f () void (g)))\n(m-both)"
+              "void f (void)")))
+
   ;; Diagnostics name also the place. Every form carries a (file
   ;; . line), so an error can cite it
   (test-group "errors cite the source location"

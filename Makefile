@@ -15,7 +15,7 @@ CSC_FLAGS += -K prefix -static
 MODULE_FLAGS = -emit-all-import-libraries -module-registration -c
 
 # Order matters, since module check correctness on compilation
-MODULES = utils sex-macros reader sex-modules semen sex-fmt-c fmt-c-writer sexc
+MODULES = utils types sex-macros reader sex-modules semen sex-fmt-c fmt-c-writer sexc
 OBJ = $(MODULES:%=%.o)
 
 sexc: $(OBJ) main.scm
@@ -28,6 +28,9 @@ sexc: $(OBJ) main.scm
 utils.o: utils.module.scm utils.scm
 	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) utils.module.scm -o utils.o -unit utils
 
+types.o: types.module.scm types.scm
+	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) types.module.scm -o types.o -unit types
+
 sex-macros.o: sex-macros.module.scm sex-macros.scm
 	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) sex-macros.module.scm -o sex-macros.o -unit sex-macros
 
@@ -37,8 +40,8 @@ reader.o: reader.module.scm reader.scm utils.o
 sex-modules.o: sex-modules.module.scm sex-modules.scm reader.o utils.o
 	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) sex-modules.module.scm -o sex-modules.o -unit sex-modules -link reader,utils
 
-semen.o: semen.module.scm semen.scm sex-macros.o sex-modules.o utils.o
-	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) semen.module.scm -o semen.o -unit semen -link sex-macros,sex-modules,utils
+semen.o: semen.module.scm semen.scm sex-macros.o sex-modules.o types.o utils.o
+	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) semen.module.scm -o semen.o -unit semen -link sex-macros,sex-modules,types,utils
 
 sex-fmt-c.o: sex-fmt-c.scm
 	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) sex-fmt-c.scm -o sex-fmt-c.o -unit sex-fmt-c
@@ -46,8 +49,8 @@ sex-fmt-c.o: sex-fmt-c.scm
 fmt-c-writer.o: fmt-c-writer.module.scm fmt-c-writer.scm sex-fmt-c.o utils.o
 	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) fmt-c-writer.module.scm -o fmt-c-writer.o -unit fmt-c-writer -link sex-fmt-c,utils
 
-sexc.o: sexc.module.scm sexc.scm fmt-c-writer.o sex-macros.o sex-modules.o reader.o semen.o utils.o
-	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) sexc.module.scm -o sexc.o -unit sexc -link fmt-c-writer,sex-macros,sex-modules,reader,semen,utils
+sexc.o: sexc.module.scm types.o sexc.scm fmt-c-writer.o sex-macros.o sex-modules.o reader.o semen.o utils.o
+	$(CHICKEN_C) $(CSC_FLAGS) $(MODULE_FLAGS) sexc.module.scm -o sexc.o -unit sexc -link fmt-c-writer,sex-macros,sex-modules,reader,semen,types,utils
 
 # Unit testing
 sex-tests:
@@ -58,7 +61,7 @@ sextest:
 	$(MAKE) -C ./tools/sextest sextest
 	cp ./tools/sextest/sextest .
 
-SEX_TEST_PROGRAMS = hello-world lists comments unicode
+SEX_TEST_PROGRAMS = hello-world lists comments unicode serialize
 
 # Multi-module linking is checked end to end; see tests/modules/Makefile.
 check-modules: sexc

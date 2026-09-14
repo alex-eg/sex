@@ -9,6 +9,7 @@
 (include "line-directives.scm")
 (include "codegen.scm")
 (include "args.scm")
+(include "types.scm")
 
 ;;; Should be the last in the test suite
 (test-exit)

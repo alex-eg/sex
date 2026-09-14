@@ -11,11 +11,23 @@
 (define (cat sym-1 sym-2)
   (string->symbol (cat-syms sym-1 sym-2)))
 
+;;; The reader keeps `;' comments as (comment "...") forms so they can
+;;; be re-emitted into the generated C. In a macro body a comment
+;;; should be a call which does nothing, hence this one
+(define (comment . _)
+  (void))
+
 (define (register-macro name arglist body)
   (put! name 'sex-macro
         `(lambda ,arglist
+           ;; A macro body is ordinary Scheme, evaluated at compile
+           ;; time. It gets `cat' for building names, and read access to
+           ;; the type database
            (import scheme
-                   (only sex-macros cat))
+                   (scheme base)
+                   (only sex-macros cat comment)
+                   (only types get-type-info get-fields get-underlying-type
+                         type-match map-fields))
            ,@body)))
 
 (define (get-macro name)

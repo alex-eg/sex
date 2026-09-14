@@ -9,6 +9,7 @@
   fmt
   sex-macros
   sex-modules
+  types
   matchable                         ; pattern matching
   srfi-1                            ; list routines
   srfi-69                           ; hash tables
@@ -72,7 +73,10 @@
          ('pub 'var . _)
          ('extern 'var . _)) (process-global-var sex-form acc))
     (('include _) (cons sex-form acc))
-    (('define . _) (cons sex-form acc))
+    ((or ('define name . _)
+         ('pub 'define name . _))
+     (add-define name sex-form)
+     (cons sex-form acc))
     (('comment . _) (cons sex-form acc))
 
     (('import . modules)
@@ -83,6 +87,7 @@
 
     ((or ('typedef new-type target)
          ('pub 'typedef new-type target))
+     (add-typedef new-type sex-form)
      (process-typedef sex-form new-type target acc))
 
     (else (sex-error sex-form "unknown top level form" sex-form))))
@@ -208,8 +213,21 @@
 
 ;;; Structs
 
+;;; Record the named structs, unions and enums in the type database
 (define (process-struct sex-struct acc)
+  (register-aggregate! sex-struct)
   (cons sex-struct acc))
+
+(define (register-aggregate! form)
+  (let* ((f (if (eq? (car form) 'pub) (cdr form) form))
+         (name (and (pair? (cdr f)) (symbol? (cadr f)) (cadr f))))
+    ;; An anonymous aggregate has a field list where the name would be,
+    ;; and nothing can refer to it by name anyway
+    (when name
+      (case (car f)
+        ((struct) (add-struct name form))
+        ((union) (add-union name form))
+        ((enum) (add-enum name form))))))
 
 (define (process-global-var sex-var acc)
   (cons sex-var acc))

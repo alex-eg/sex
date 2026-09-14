@@ -1,0 +1,64 @@
+;;; Generating code from a type's own definition.
+;;;
+;;; `serialize-struct' is handed nothing but a struct's name. It asks
+;;; the compiler's type database what fields that struct has and what
+;;; type each one is, and writes a printer to match. Add a field to the
+;;; struct and the printer grows with it, with no other edit.
+;;;
+;;; The database is filled in as toplevel forms are processed, in order,
+;;; so a struct has to be declared before the macro call that asks about
+;;; it -- the same rule C has.
+
+(include stdio.h)
+
+(defmacro (serialize-struct type-name)
+  ;; map-fields walks the declaration; type-match picks a printf
+  ;; conversion per field. Both come from the compiler's type database,
+  ;; so the macro never takes a type apart itself.
+  (let ((printers
+         (map-fields type-name
+           (lambda (name type)
+             `(fprintf out
+                       ,(string-append
+                         " " (symbol->string name) "="
+                         (type-match type
+                           (int             "%d")
+                           (char            "%c")
+                           (long            "%ld")
+                           (unsigned        "%u")
+                           (float           "%g")
+                           (double          "%g")
+                           ((* const char)  "%s")
+                           ((* char)        "%s")
+                           (else (error "serialize-struct: unsupported field type"
+                                        type-name name type))))
+                       (-> v ,name))))))
+    (if (not printers)
+        (error "serialize-struct: no such struct" type-name)
+        `(pub fn ,(cat 'serialize- type-name)
+              ((v (* const struct ,type-name)) (out (* FILE)))
+              void
+           (fprintf out ,(string-append (symbol->string type-name) " {"))
+           ,@printers
+           (fprintf out " }\n")))))
+
+(struct point ((x int) (y int)))
+
+(struct person
+  ((name (* const char))
+   (age int)
+   (height float)))
+
+;;; Two printers, written by the compiler from the declarations above.
+(serialize-struct point)
+(serialize-struct person)
+
+(pub fn main () int
+  (var origin (struct point) #(0 0))
+  (var corner (struct point) #(640 -480))
+  (var alex (struct person) #("Alex" 34 1.82))
+
+  (serialize-point (& origin) stdout)
+  (serialize-point (& corner) stdout)
+  (serialize-person (& alex) stdout)
+  (return 0))
