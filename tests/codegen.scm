@@ -72,4 +72,31 @@
               "(int *)&a"))
     (test-assert "sizeof is left bare"
       (emits? (in-fn "(var n int (cast (sizeof int) int))")
-              "(int)sizeof(int)"))))
+              "(int)sizeof(int)")))
+
+  ;; A `;' comment is a form, so one written inside a construct with
+  ;; positional slots used to land in a slot and shift everything after
+  ;; it -- silently. In an `if' the comment became the then-arm and the
+  ;; then-arm became an `else if' condition, and it still compiled.
+  ;; Comments are now taken out of the slots and emitted just before the
+  ;; statement; comments in a body stay where they were written.
+  (test-group "comments in positional slots"
+    (test-assert "an if arm is not shifted"
+      (not (emits? (in-fn "(if 1 ;; c\n (g 1) (g 2))") "else if")))
+    (test-assert "and both arms survive"
+      (emits? (in-fn "(if 1 ;; c\n (g 1) (g 2))") "g(1)"))
+    (test-assert "the comment survives too"
+      (emits? (in-fn "(if 1 ;; kept here\n (g 1) (g 2))") "kept here"))
+    (test-assert "a for header is not shifted"
+      (emits? (in-fn "(for ;; c\n (var i int 0) (< i 2) (++ i) (g i))")
+              "for (int i = 0; i < 2; ++i)"))
+    (test-assert "a while condition is not shifted"
+      (emits? (in-fn "(while ;; c\n (< a b) (g 1))") "while (a < b)"))
+    (test-assert "a var is not shifted"
+      (emits? (in-fn "(var ;; c\n x int 5)") "int x = 5"))
+    (test-assert "a cast is not shifted"
+      (emits? (in-fn "(var y int (cast ;; c\n a int))") "(int)a"))
+    ;; Bodies are a statement sequence, so comments there stay put.
+    (test-assert "a comment in a body stays in the body"
+      (emits? (in-fn "(while (< a b) ;; inside\n (g 1))")
+              "while (a < b) {"))))

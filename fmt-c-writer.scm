@@ -61,6 +61,28 @@ surrounding c-block supplies them)."
         `(%begin ,(line-directive src) ,(walk-expr s))
         (walk-expr s))))
 
+;;; A `;' comment reads as a form, so one written inside a construct
+;;; with positional slots lands in a slot and shifts everything after
+;;; it. So take the positional slots by skipping comments, and hand
+;;; the comments back to be emitted just before the statement
+(define (take-slots forms n)
+  "Three values: the comment forms skipped over, the next N non-comment
+forms, and what remains."
+  (let loop ((fs forms) (n n) (comments (list)) (slots (list)))
+    (cond ((or (= n 0) (null? fs))
+           (values (reverse comments) (reverse slots) fs))
+          ((comment-form? (car fs))
+           (loop (cdr fs) n (cons (car fs) comments) slots))
+          (else
+           (loop (cdr fs) (- n 1) comments (cons (car fs) slots))))))
+
+;;; `%begin' is a statement sequence that emits no braces of its own, so
+;;; the comments simply precede the statement.
+(define (with-comments comments form)
+  (if (null? comments)
+      form
+      `(%begin ,@(map walk-expr comments) ,form)))
+
 (define (walk-if-clauses clauses)
   "(test stmt test stmt ... [else-stmt]) -- tests stay expressions."
   (let loop ((cs clauses) (acc (list)))
@@ -128,9 +150,11 @@ surrounding c-block supplies them)."
     ;; is the fmt-c directive for the `.' operator (see sex-fmt-c).
     (('dot-access . rest) (cons '%. (map walk-expr rest)))
     (('var . _) (walk-var form))
-    (('cast expr type) (list '%cast
-                             (walk-type type)
-                             (walk-expr expr)))
+    ;; An expression has no room for a statement, so a comment in a
+    ;; cast is dropped rather than relocated.
+    (('cast . rest)
+     (let-values (((comments slots _) (take-slots rest 2)))
+       (list '%cast (walk-type (cadr slots)) (walk-expr (car slots)))))
     (('enum . _) (walk-enum form))
     ;; | is problematic... And c-or/bit-or/etc are actually
     ;; procedures, so we have to call the procedure itself
@@ -142,21 +166,38 @@ surrounding c-block supplies them)."
     ;; and each is spliced or wrapped according to what the
     ;; corresponding fmt-c procedure accepts.
     (('do . stmts) (cons '%block-begin (walk-body stmts)))
-    (('if . clauses) (cons 'if (walk-if-clauses clauses)))
-    (('while test . body)
-     (cons* 'while (walk-expr test) (walk-body body)))
-    (('for init test step . body)
-     (cons* 'for (walk-expr init) (walk-expr test) (walk-expr step)
-            (walk-body body)))
+    (('if . clauses)
+     (with-comments (filter comment-form? clauses)
+       (cons 'if (walk-if-clauses (remove comment-form? clauses)))))
+    (('while . rest)
+     (let-values (((comments slots body) (take-slots rest 1)))
+       (with-comments comments
+         (cons* 'while (walk-expr (car slots)) (walk-body body)))))
+    (('for . rest)
+     (let-values (((comments slots body) (take-slots rest 3)))
+       (with-comments comments
+         (cons* 'for (walk-expr (car slots)) (walk-expr (cadr slots))
+                (walk-expr (caddr slots))
+                (walk-body body)))))
     ;; No anchor *between* switch clauses: c-switch requires every clause
     ;; to be a case/default form and errors on anything else. The clause
     ;; bodies are anchored from inside, which is what a debugger steps
     ;; onto -- a `case' label is not a statement.
-    (('switch e . clauses)
-     (cons* 'switch (walk-expr e) (map walk-expr clauses)))
-    (('case v . body) (cons* 'case (walk-expr v) (walk-body body)))
-    (('case/fallthrough v . body)
-     (cons* 'case/fallthrough (walk-expr v) (walk-body body)))
+    ;; A comment between clauses has to go too: c-switch requires every
+    ;; clause to be a case/default form and errors on anything else.
+    (('switch . rest)
+     (let-values (((comments slots clauses) (take-slots rest 1)))
+       (with-comments (append comments (filter comment-form? clauses))
+         (cons* 'switch (walk-expr (car slots))
+                (map walk-expr (remove comment-form? clauses))))))
+    (('case . rest)
+     (let-values (((comments slots body) (take-slots rest 1)))
+       (with-comments comments
+         (cons* 'case (walk-expr (car slots)) (walk-body body)))))
+    (('case/fallthrough . rest)
+     (let-values (((comments slots body) (take-slots rest 1)))
+       (with-comments comments
+         (cons* 'case/fallthrough (walk-expr (car slots)) (walk-body body)))))
     (('default . body) (cons 'default (walk-body body)))
 
     (else (map walk-expr form))))
@@ -167,14 +208,16 @@ surrounding c-block supplies them)."
   ;; (var b [const char 512]) -> (%var (%array (const char) 512) b)
   ;; note: [...] is actually (¤ ...) after reading
   ;; (var c (fn ((int) (float)) void)) -> (%var (%fun void ((int) (float))) c)
-  `(%var
-    ,(walk-type (third form))
-    ,(atom-to-fmt-c (second form))
-    .
-    ,(if (null? (drop form 3))
-         (list)
-         (walk-expr (drop form 3)))      ; optional init expression
-    ))
+  ;; Likewise a declaration: drop any comment rather than shift the
+  ;; name and type apart.
+  (let ((form (cons (car form) (remove comment-form? (cdr form)))))
+    `(%var
+      ,(walk-type (third form))
+      ,(atom-to-fmt-c (second form))
+      .
+      ,(if (null? (drop form 3))
+           (list)
+           (walk-expr (drop form 3)))))) ; optional init expression
 
 (define (walk-type form)
   ;; int -> int
