@@ -114,6 +114,12 @@ forms, and what remains."
     ((attribute) '%attribute)
     ((¤) 'vector-ref)
     ((include) '%include)
+    ;; a `|' inside a symbol has to be escaped to be written in
+    ;; a Scheme source, so we just rename it in fmt-c compatible
+    ;; way
+    ((|\||) 'bit-or)
+    ((|\|\||) '%or)
+    ((|\|=|) 'bit-or=)
     ;; uh things we do for c89 compatibility
     ((bool) 'int)
     ((true) 1)
@@ -190,8 +196,6 @@ forms, and what remains."
      (let-values (((comments slots _) (take-slots rest 2)))
        (list '%cast (walk-type (cadr slots)) (walk-expr (car slots)))))
     (('enum . _) (walk-enum form))
-    ;; | is problematic... And c-or/bit-or/etc are actually
-    ;; procedures, so we have to call the procedure itself
     (('c-or . rest) (apply c-or (map walk-expr rest)))
     (('c-bit-or . rest) (apply c-bit-or (map walk-expr rest)))
     (('c-bit-or= . rest) (apply c-bit-or= (map walk-expr rest)))

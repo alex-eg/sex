@@ -123,4 +123,34 @@
     ;; Bodies are a statement sequence, so comments there stay put.
     (test-assert "a comment in a body stays in the body"
       (emits? (in-fn "(while (< a b) ;; inside\n (g 1))")
-              "while (a < b) {"))))
+              "while (a < b) {")))
+  ;; `|', `||' and `|=' read as ordinary symbols -- our own reader has
+  ;; no |symbol| syntax for them to collide with -- but fmt-c cannot
+  ;; dispatch on a symbol whose name it cannot write in Scheme source,
+  ;; so they used to fall through to the function-call path and emit
+  ;; `|\||(a, b)'. The writer renames them to heads fmt-c spells with
+  ;; a string.
+  (test-group "bitwise and logical operators"
+    (test-assert "bit-or"
+      (emits? (in-fn "(var x int (| a b))") "int x = a | b"))
+    (test-assert "logical or"
+      (emits? (in-fn "(var x int (|| a b))") "int x = a || b"))
+    (test-assert "or-assign"
+      (emits? (in-fn "(|= a b)") "a |= b"))
+    (test-assert "bit-and"
+      (emits? (in-fn "(var x int (& a b))") "int x = a & b"))
+    (test-assert "logical and"
+      (emits? (in-fn "(var x int (&& a b))") "int x = a && b"))
+
+    ;; Precedence too: the operator reaches fmt-c as a string it looks
+    ;; up, not as a symbol in its table
+    (test-assert "parenthesised where C needs it"
+      (emits? (in-fn "(var x int (& (| a b) a))") "(a | b) & a"))
+    (test-assert "and left alone where it does not"
+      (emits? (in-fn "(var x int (| a (& a b)))") "int x = a | a & b"))
+
+    ;; The spelling from before they could be written directly
+    (test-assert "c-or is still accepted"
+      (emits? (in-fn "(var x int (c-or a b))") "a || b"))
+    (test-assert "c-bit-or is still accepted"
+      (emits? (in-fn "(var x int (c-bit-or a b))") "a | b"))))
