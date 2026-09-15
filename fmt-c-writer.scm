@@ -382,10 +382,17 @@ forms, and what remains."
 
 (define (walk-enum form)
   (match form
+    ;; Naming one without defining it: `(var m (enum mood))', the same
+    ;; shape walk-struct accepts for `(struct foo)'. Guarded, and
+    ;; before the anonymous case, since `(enum (red green))' is also a
+    ;; two-element form
+    (('enum (? symbol? name))
+     `(enum ,(atom-to-fmt-c name)))
     (('enum (values ...))
      `(enum ,(map atom-to-fmt-c values)))
     (('enum name (values ...))
-     `(enum ,(atom-to-fmt-c name) ,(map atom-to-fmt-c values)))))
+     `(enum ,(atom-to-fmt-c name) ,(map atom-to-fmt-c values)))
+    (else (sex-error form "malformed enum" form))))
 
 (define (walk-extern form)
   (match form
@@ -410,6 +417,7 @@ forms, and what remains."
 
          ('struct . _)
          ('union . _)
+         ('enum . _)
 
          ('typedef . _))
      ;; ignore here, used in generating public interface
@@ -423,7 +431,10 @@ forms, and what remains."
     (('fn . _) (list 'static (walk-function form)))
     (('var . _) (list 'static (walk-var form)))
     (('extern . rest) (walk-extern rest))
-    (('pub . rest) (walk-public rest))
+    ;; The cdr of a form has no location of its own, so hand it the
+    ;; `pub' form's -- otherwise a complaint about what follows `pub'
+    ;; cannot say where it was written
+    (('pub . rest) (walk-public (copy-form-source! form rest)))
     ((or ('struct . _)
          ('union . _)) (walk-struct form))
     (('enum . _) (walk-enum form))

@@ -640,16 +640,22 @@
   (define (c-union . args) (apply c-struct/aux "union" args))
   (define (c-class . args) (apply c-struct/aux "class" args))
 
+  ;; MODIFIED FROM UPSTREAM fmt-c: an enum may also be named without
+  ;; being defined -- `enum color m;' -- exactly as c-struct/aux
+  ;; already allows `struct point p;'. Upstream assumed a value list
+  ;; was always present and mapped over whatever stood in its place.
   (define (c-enum x . o)
     (define (c-enum-one x)
       (if (pair? x) (cat (car x) " = " (c-expr (cadr x))) (dsp x)))
     (let* ((name (if (null? o) (if (or (symbol? x) (string? x)) x #f) x))
-           (vals (if name (car o) x)))
-      (c-wrap-stmt
-       (cat
-        (c-braced-block
-         (if name (cat "enum " name) (dsp "enum"))
-         (c-in-expr (apply c-begin (map c-enum-one vals))))))))
+           (vals (if name (if (null? o) #f (car o)) x)))
+      (if vals
+          (c-wrap-stmt
+           (cat
+            (c-braced-block
+             (if name (cat "enum " name) (dsp "enum"))
+             (c-in-expr (apply c-begin (map c-enum-one vals))))))
+          (c-wrap-stmt (cat "enum " name)))))
 
   (define (c-attribute . args)
     (cat "__attribute__ ((" (fmt-join c-expr args ", ") "))"))
@@ -743,7 +749,13 @@
                      (if (and (pair? (cadr type)) (eq? '%array (caadr type)))
                          (c-paren name)
                          name))))
-          ((enum) (apply c-enum name (cdr type)))
+          ;; MODIFIED FROM UPSTREAM fmt-c: upstream passed the
+          ;; declarator's name to c-enum as the enum's tag, so
+          ;; `(var m (enum color))' emitted `enum m {...}' and lost the
+          ;; variable. Enums are laid out like structs: the type, then
+          ;; the name being declared.
+          ((enum)
+           (cat (apply c-enum (cdr type)) (if name (cat " " name) "")))
           ((struct union class)
            (cat (apply c-struct/aux (car type) (cdr type)) (if name (cat " " name) "")))
           (else (fmt-join/last c-expr (lambda (x) (c-type x name)) type " "))))

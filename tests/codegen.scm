@@ -141,6 +141,28 @@ compiles."
     (test-assert "a comment in a body stays in the body"
       (emits? (in-fn "(while (< a b) ;; inside\n (g 1))")
               "while (a < b) {")))
+
+  (test-group "pub enum"
+    (test-assert "is emitted"
+      (emits? "(pub enum color (red green blue))" "enum color"))
+    (test-assert "with its values"
+      (emits? "(pub enum color (red green blue))" "red"))
+    (test-assert "and a non-pub enum still is too"
+      (emits? "(enum color (red green blue))" "enum color"))
+    ;; Naming an enum as a type, rather than defining it, had no
+    ;; walk-enum clause and died with `(match) no matching pattern'
+    (test-assert "and it can then be used as a type"
+      (emits? "(enum color (red green blue)) (fn f () void (var m (enum color) red))"
+              "enum color m = red"))
+    (test-assert "a malformed enum is rejected with its location"
+      (reports? "(enum)" "codegen.sex:1:"))
+    ;; c-type handed the declarator's name to c-enum as the enum tag,
+    ;; so this emitted `enum m { up, down }' with no variable at all
+    (test-assert "an anonymous enum keeps the variable"
+      (emits? "(fn f () void (var e (enum (up down)) up))" "} e = up"))
+    (test-assert "and a named definition keeps both"
+      (emits? "(fn f () void (var n (enum named (a b)) a))" "enum named{")))
+
   ;; `|', `||' and `|=' read as ordinary symbols -- our own reader has
   ;; no |symbol| syntax for them to collide with -- but fmt-c cannot
   ;; dispatch on a symbol whose name it cannot write in Scheme source,

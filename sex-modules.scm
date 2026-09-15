@@ -83,7 +83,7 @@
        ;; A variable becomes an `extern' declaration
        ((var)
         (cons (copy-form-source! form (cons 'extern (take (cdr form) 3))) acc))
-       ((define defmacro import include struct typedef union)
+       ((define defmacro enum import include struct typedef union)
         (cons (copy-form-source! form (cdr form)) acc))
        (else (sex-error form "pub must be followed by a definition" form))))
     (else acc)))
