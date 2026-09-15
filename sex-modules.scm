@@ -14,6 +14,10 @@
 
 (define +persistent-module-paths+ (list))
 
+;;; for guarding against multiple imports (sort of mandatory #pragma
+;;; once)
+(define +imported-modules+ (list))
+
 (define (get-modules-public-forms module-list)
   ;; Module list is a list of symbols
   ;; How Sex handles modules:
@@ -29,7 +33,11 @@
   (let ((module-path (locate-module name)))
     (assert module-path (fmt #f "Failed to find module " name " in "
                              (get-module-paths)))
-    (read-public-interface module-path)))
+    (if (member module-path +imported-modules+)
+        (list)
+        (begin
+          (set! +imported-modules+ (cons module-path +imported-modules+))
+          (read-public-interface module-path)))))
 
 (define (get-module-paths)
   (cons (current-directory)

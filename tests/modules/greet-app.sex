@@ -7,6 +7,9 @@
 ;;; as a prototype and `greet-count' as an extern. Both keep external
 ;;; linkage, so they refer to the one definition in greet.o rather than
 ;;; to private copies.
+;;;
+;;; Also check that import populates type-database, by means of
+;;; describe-fields macro, which should work on imported type.
 
 (include stdio.h)
 
@@ -16,4 +19,6 @@
   (greet "world")
   (greet "sex")
   (printf "%d greetings\n" greet-count)
+  (describe-fields greeting)
+  (printf "\n")
   (return 0))

@@ -93,17 +93,9 @@
     (else (sex-error sex-form "unknown top level form" sex-form))))
 
 (define (process-imports module-public-forms acc)
-  ;; Recursively process imports: register public macros, cons all
-  ;; other public things to our acc
-  (if (null? module-public-forms) acc
-      (match (car module-public-forms)
-        (('defmacro . rest)
-         (defmacro rest)
-         (process-imports (cdr module-public-forms) acc))
-        (else
-         (process-imports (cdr module-public-forms)
-                          (cons (car module-public-forms)
-                                acc))))))
+  ;; consume (import ...) form and process imports so
+  ;; data types end up in types db
+  (fold match-sex-form acc module-public-forms))
 
 (define (macro-expand form)
   "Walk the form recursively and expand all macros, until none is left."

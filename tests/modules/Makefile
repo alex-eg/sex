@@ -7,10 +7,14 @@
 # module's object survives being passed after `--'. Get any of them
 # wrong and this fails to link -- or, in the `pub var' case, links and
 # quietly counts into a private copy.
+#
+# It also checks what only a second translation unit can check: that an
+# imported type reaches the type database, by expanding a macro that
+# reads the imported struct's fields.
 
 SEXC ?= ../../sexc
 
-EXPECTED = hello, world\nhello, sex\n2 greetings
+EXPECTED = hello, world\nhello, sex\n2 greetings\ntext times 
 
 check:
 	@$(SEXC) greet.sex -c -o greet.o
