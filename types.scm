@@ -76,21 +76,44 @@
 ;;; ((name type) ...) for a struct or union, #f for anything else --
 ;;; including a name that was never declared. Callers give the better
 ;;; error, since they know what they wanted it for.
+;;;
+;;; A typedef is followed to what it stands for, so reflection over an
+;;; alias works exactly as it does over the name it aliases.
 (define (get-fields name)
-  (let ((info (get-type-info name)))
+  (let ((info (resolve-type-info name)))
     (and info
          (memq (car info) '(struct union))
          (caddr info))))
 
-;;; Follow a typedef chain to the name it ultimately stands for. #f if
-;;; NAME is not a typedef.
+;;; Follow a typedef chain to the name it stands for. #f if NAME is
+;;; not a typedef. A typedef that leads back to itself stops rather
+;;; than spinning: nothing prevents one from being written.
 (define (get-underlying-type name)
+  (let follow ((name name) (seen (list)))
+    (and (not (member name seen))
+         (let ((info (get-type-info name)))
+           (and info
+                (eq? (car info) 'typedef)
+                (let ((target (caddr info)))
+                  (or (and (symbol? target) (follow target (cons name seen)))
+                      target)))))))
+
+;;; The declaration NAME ultimately names. For a typedef that is the
+;;; entry of whatever it stands for, and for anything else it is
+;;; NAME's own info.
+(define (resolve-type-info name)
   (let ((info (get-type-info name)))
     (and info
-         (eq? (car info) 'typedef)
-         (let ((target (caddr info)))
-           (or (and (symbol? target) (get-underlying-type target))
-               target)))))
+         (if (eq? (car info) 'typedef)
+             (let* ((target (get-underlying-type name))
+                    (tag (cond ((symbol? target) target)
+                               ((and (pair? target)
+                                     (pair? (cdr target))
+                                     (symbol? (cadr target)))
+                                (cadr target))
+                               (else #f))))
+               (and tag (get-type-info tag)))
+             info))))
 
 ;;; Type matcher macro
 ;;; (type-match type
@@ -119,15 +142,16 @@
 ;;;
 ;;; Returns #f if nothing of that name was declared
 (define (map-fields struct-union-enum fn)
-  (let ((info (get-type-info struct-union-enum)))
+  (let ((info (resolve-type-info struct-union-enum)))
     (and info
          (case (car info)
            ((struct union)
             (map (lambda (field) (fn (car field) (cadr field)))
                  (caddr info)))
-           ;; An enumerator's type is the enum itself.
+           ;; An enumerator's type is the enum itself -- named as it was
+           ;; declared, since `enum some-typedef' is not a C type.
            ((enum)
-            (let ((type (list 'enum struct-union-enum)))
+            (let ((type (list 'enum (cadr info))))
               (map (lambda (value) (fn value type))
                    (caddr info))))
            (else #f)))))

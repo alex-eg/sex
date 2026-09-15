@@ -54,6 +54,42 @@
         #f
         (get-underlying-type 't-point))
 
+  ;; Reflection through an alias. Both spellings of the target occur:
+  ;; (typedef point-t point) and (typedef point-t (struct point)).
+  (add-typedef 't-point-t '(typedef t-point-t t-point))
+  (test "a typedef to a struct has the struct's fields"
+        '((x int) (y int))
+        (get-fields 't-point-t))
+  (add-typedef 't-point-s '(typedef t-point-s (struct t-point)))
+  (test "written the other way round too"
+        '((x int) (y int))
+        (get-fields 't-point-s))
+  (add-typedef 't-point-2 '(typedef t-point-2 t-point-t))
+  (test "and through a chain of them"
+        '((x int) (y int))
+        (get-fields 't-point-2))
+  (test "map-fields follows an alias as well"
+        '((x int) (y int))
+        (map-fields 't-point-t (lambda (name type) (list name type))))
+  (add-typedef 't-color-t '(typedef t-color-t t-color))
+  (test "an aliased enum is still named as it was declared"
+        '((red (enum t-color)) (green (enum t-color)) (blue (enum t-color)))
+        (map-fields 't-color-t (lambda (name type) (list name type))))
+  (test "a typedef to a primitive has no fields"
+        #f
+        (get-fields 't-u8))
+
+  ;; A typedef can be written to lead back to itself. Resolving it must
+  ;; stop rather than spin
+  (add-typedef 't-loop-a '(typedef t-loop-a t-loop-b))
+  (add-typedef 't-loop-b '(typedef t-loop-b t-loop-a))
+  (test "a typedef cycle terminates"
+        't-loop-a
+        (get-underlying-type 't-loop-a))
+  (test "and has no fields"
+        #f
+        (get-fields 't-loop-a))
+
   ;; A #define keeps its value forms -- there can be more than one.
   (add-define 't-maxn '(define t-maxn 8))
   (test "defines are recorded"

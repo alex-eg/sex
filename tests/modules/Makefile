@@ -14,7 +14,7 @@
 
 SEXC ?= ../../sexc
 
-EXPECTED = hello, world\nhello, sex\n2 greetings\ntext times \nmood 1
+EXPECTED = hello, world\nhello, sex\n2 greetings\ntext times \ntext times \nmood 1
 
 check:
 	@$(SEXC) greet.sex -c -o greet.o

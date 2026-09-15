@@ -13,6 +13,8 @@
 
 (pub enum mood (cheerful grumpy))
 
+(pub typedef greeting-t (struct greeting))
+
 ;;; Compile-time reflection across the module boundary: both the macro
 ;;; and the struct it asks about are exported, and the importing unit
 ;;; has to know the struct's fields to expand this.

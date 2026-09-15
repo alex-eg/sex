@@ -21,6 +21,9 @@
   (printf "%d greetings\n" greet-count)
   (describe-fields greeting)
   (printf "\n")
+  ;; ...and through the imported typedef for it
+  (describe-fields greeting-t)
+  (printf "\n")
   (var m (enum mood) grumpy)
   (printf "mood %d\n" m)
   (return 0))
