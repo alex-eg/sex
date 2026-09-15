@@ -42,5 +42,10 @@
   (test '(%. a_b c) (walk-expr '(dot-access a-b c)))
 
   ;; comment -> %comment directive (rendered as /* ... */)
-  (test '(%comment " hi") (walk-expr '(comment " hi")))
-  (test '(%comment " hi") (process-toplevel-form '(comment " hi"))))
+  ;; The reader eats only the `;' that introduced the line, so ";;; Foo"
+  ;; arrives as ";; Foo"; and c-comment puts nothing between /* */ and
+  ;; the text. Both are handled on the way out.
+  (test '(%comment " hi ") (walk-expr '(comment " hi")))
+  (test '(%comment " hi ") (process-toplevel-form '(comment " hi")))
+  (test '(%comment " Foo ") (walk-expr '(comment ";; Foo")))
+  (test '(%comment " Foo ") (walk-expr '(comment ";;;   Foo   "))))

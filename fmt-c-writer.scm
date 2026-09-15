@@ -47,8 +47,8 @@ source location. Only statement positions may be walked this way: a
                       (if src
                           (list (line-directive src) (walk-expr s))
                           (list (walk-expr s)))))
-                  stmts)
-      (map walk-expr stmts)))
+                  (pack-comments stmts))
+      (map walk-expr (pack-comments stmts))))
 
 (define (walk-stmt s)
   "A statement in a slot that holds exactly one form -- an `if' arm.
@@ -132,6 +132,40 @@ forms, and what remains."
 (define (comment-form? f)
   (and (pair? f) (eq? (car f) 'comment)))
 
+;;; Strip ;s so ;;; Foo becomes /* Foo */ and not /* ;; Foo */
+(define (strip-comment-marker text)
+  (string-trim-both (string-trim text #\;)))
+
+(define (walk-comment texts)
+  (list '%comment
+        (string-append " "
+                       (string-intersperse (map strip-comment-marker texts)
+                                           "\n ")
+                       " ")))
+
+;;; Merge multiple lines of /* */ into single block
+(define (pack-comments forms)
+  (let loop ((fs forms) (acc (list)))
+    (cond
+     ((null? fs) (reverse acc))
+     ((comment-form? (car fs))
+      (let ((first (car fs)))
+        (let gather ((rest (cdr fs)) (texts (cdr first)) (line (form-line first)))
+          (if (and (pair? rest)
+                   (comment-form? (car rest))
+                   line
+                   (equal? (form-file first) (form-file (car rest)))
+                   (eqv? (form-line (car rest)) (+ line 1)))
+              (gather (cdr rest)
+                      (append texts (cdr (car rest)))
+                      (form-line (car rest)))
+              (loop rest
+                    (cons (if (eq? texts (cdr first))
+                              first          ; a run of one, left alone
+                              (copy-form-source! first (cons 'comment texts)))
+                          acc))))))
+     (else (loop (cdr fs) (cons (car fs) acc))))))
+
 (define (walk-generic-toplevel form)
   (cond ((atom? form) (atom-to-fmt-c form))
         ((list? form) (map walk-generic-toplevel form))
@@ -145,7 +179,7 @@ forms, and what remains."
     ((? atom?)
      (atom-to-fmt-c form))
     ;; (comment "text") -> /* text */. `%comment' is the fmt-c directive.
-    (('comment . text) (cons '%comment text))
+    (('comment . text) (walk-comment text))
     ;; (dot-access obj field ...) -> obj.field... member access. `%.'
     ;; is the fmt-c directive for the `.' operator (see sex-fmt-c).
     (('dot-access . rest) (cons '%. (map walk-expr rest)))
@@ -200,7 +234,8 @@ forms, and what remains."
          (cons* 'case/fallthrough (walk-expr (car slots)) (walk-body body)))))
     (('default . body) (cons 'default (walk-body body)))
 
-    (else (map walk-expr form))))
+    ;; Drop comments so they will not generate additional comma
+    (else (map walk-expr (remove comment-form? form)))))
 
 (define (walk-var form)
   ;; (var a int) -> (%var int a)
@@ -365,7 +400,7 @@ forms, and what remains."
 
 (define (process-toplevel-form form)
   (match form
-    (('comment . text) (cons '%comment text))
+    (('comment . text) (walk-comment text))
     (('fn . _) (list 'static (walk-function form)))
     (('var . _) (list 'static (walk-var form)))
     (('extern . rest) (walk-extern rest))
@@ -386,4 +421,4 @@ forms, and what remains."
                 (when src
                   (fmt #t (c-expr (line-directive src)))))
               (fmt #t (c-expr (process-toplevel-form form)) nl))
-            sex-forms))
+            (pack-comments sex-forms)))

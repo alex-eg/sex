@@ -74,6 +74,30 @@
       (emits? (in-fn "(var n int (cast (sizeof int) int))")
               "(int)sizeof(int)")))
 
+  ;; A comment among a call's arguments used to become an argument,
+  ;; and c-apply put a comma on each side of it -- which does not
+  ;; compile. It is dropped, as in any other expression context.
+  (test-group "comments among arguments"
+    (test-assert "no stray comma"
+      (not (emits? (in-fn "(g 1 ;; c\n 2)") "*/,")))
+    (test-assert "the arguments survive"
+      (emits? (in-fn "(g 1 ;; c\n 2)") "g(1, 2)")))
+
+  ;; The reader leaves the `;'s that introduced each line, and a run of
+  ;; comment lines arrives as one form per line.
+  (test-group "comment rendering"
+    (test-assert "the markers are stripped"
+      (emits? "(fn f () void ;;; Foo\n (g))" "/* Foo */"))
+    (test-assert "so none survive into the C"
+      (not (emits? "(fn f () void ;;; Foo\n (g))" ";;")))
+    (test-assert "consecutive lines are packed into one comment"
+      (emits? "(fn f () void\n ;; first\n ;; second\n (g))"
+              "/* first\n second */"))
+    ;; Packing compares locations rather than just looking for adjacent
+    ;; comment forms, so a blank line still separates them.
+    (test-assert "a blank line keeps them apart"
+      (emits? "(fn f () void\n ;; first\n\n ;; second\n (g))" "/* first */")))
+
   ;; A `;' comment is a form, so one written inside a construct with
   ;; positional slots used to land in a slot and shift everything after
   ;; it -- silently. In an `if' the comment became the then-arm and the
