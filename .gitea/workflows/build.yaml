@@ -1,0 +1,76 @@
+name: Sex CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch repository
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        run: |
+          set -eu
+          git config --global --add safe.directory "$PWD"
+          git init
+          git remote add origin "${GITHUB_SERVER_URL%/}/${GITHUB_REPOSITORY}.git"
+          git -c http.extraHeader="Authorization: token ${GITEA_TOKEN}" \
+            fetch --depth 1 origin "${GITHUB_SHA}"
+          git checkout --force FETCH_HEAD
+
+      - name: Install toolchain
+        run: |
+          set -eu
+          if [ "$(id -u)" -eq 0 ]; then
+            apt-get update
+            apt-get install -y --no-install-recommends build-essential git wget ca-certificates
+          else
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends build-essential git wget ca-certificates
+          fi
+
+      - name: Install Chicken
+        env:
+          CHICKEN_VERSION: "6.0.0"
+          CHICKEN_SHA256: 92835552b1b687ad26737e429b5aba36510bf429f8816ec0f6d336c8cb41f443
+        run: |
+          set -eu
+          tarball="chicken-${CHICKEN_VERSION}.tar.gz"
+          wget -N "https://code.call-cc.org/releases/${CHICKEN_VERSION}/${tarball}"
+          echo "${CHICKEN_SHA256}  ${tarball}" | sha256sum -c
+          tar zxf "${tarball}"
+          (
+            cd "chicken-${CHICKEN_VERSION}"
+            ./configure --prefix=/usr/local
+            make -j"$(nproc)"
+            if [ "$(id -u)" -eq 0 ]; then
+              make install
+            else
+              sudo make install
+            fi
+          )
+          hash -r
+          csc -version
+
+      - name: Install eggs
+        run: |
+          set -eu
+          mkdir -p .eggs
+          repo="$(chicken-install -repository)"
+          echo "CHICKEN_INSTALL_REPOSITORY=${PWD}/.eggs" >> "$GITHUB_ENV"
+          echo "CHICKEN_REPOSITORY_PATH=${PWD}/.eggs:${repo}" >> "$GITHUB_ENV"
+          export CHICKEN_INSTALL_REPOSITORY="${PWD}/.eggs"
+          export CHICKEN_REPOSITORY_PATH="${PWD}/.eggs:${repo}"
+          # shellcheck disable=SC2046
+          chicken-install $(cat dependencies.txt)
+
+      - name: Build sexc
+        run: make sexc && ./sexc --help
+
+      - name: Run tests
+        run: make run-tests
