@@ -2,6 +2,7 @@
         (scheme base)                   ; call/cc
         brev-separate
         (chicken base)
+        (chicken condition)             ; handle-exceptions
         (chicken file)
         (chicken plist)
         (chicken pretty-print)
@@ -117,15 +118,22 @@
                                  (emit-c sex-forms)))))
 
 (define (compile-to-file sex-forms output args cc-args)
+  "Hand the generated C to the C compiler. Returns the compiler's exit
+status, which is ours to pass on."
   (let ((compiler (or (get-arg args 'c-compiler #f)
                       (get-env-var "SEX_CC")
                       "cc"))
         (out-file (if (eq? output 'default)
                       "a.out"
-                      output)))
-    ;; The generated C goes to a temporary .c file rather than the
-    ;; compiler's stdin
-    (let ((c-file (create-temporary-file "c")))
+                      output))
+        ;; The generated C goes to a temporary .c file rather than the
+        ;; compiler's stdin. It is removed however we leave -- emit-c
+        ;; can throw, and used to leave the file behind when it did
+        (c-file (create-temporary-file "c")))
+    ;; An unhandled error ends the process without unwinding, so the
+    ;; cleanup cannot be left to dynamic-wind
+    (handle-exceptions exn
+        (begin (delete-file* c-file) (abort exn))
       (with-output-to-file c-file
         (lambda () (emit-c sex-forms)))
       (let ((proc (process compiler (append (list "-o" out-file)
@@ -135,9 +143,9 @@
                                             (list c-file)
                                             cc-args))))
         (call-with-values (lambda () (process-wait proc))
-          (lambda status
+          (lambda (pid normal-exit? status)
             (delete-file* c-file)
-            (apply values status)))))))
+            (if normal-exit? status 1)))))))
 
 (define (semantic-process-forms raw-forms input-source)
   (if (eq? input-source 'stdin)
@@ -198,5 +206,7 @@
                  (get-arg args 'emit-c #f))
              ;; Emit processed and macro-expanded sex code, or emit C code
              (emit-c-or-sex sex-forms output args)
-             ;; Compile file!
-             (compile-to-file sex-forms output args cc-args)))))))
+             ;; Compile file! The C compiler's status is ours too
+             (let ((status (compile-to-file sex-forms output args cc-args)))
+               (unless (zero? status)
+                 (exit status)))))))))

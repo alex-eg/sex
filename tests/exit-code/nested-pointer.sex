@@ -1,0 +1,4 @@
+;;; Rejected by the writer, so emit-c throws: there is a temporary .c
+;;; by then, and it must not survive.
+(fn f () void
+  (var p (* (* char))))

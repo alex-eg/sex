@@ -1,0 +1,4 @@
+;;; Compiles cleanly, so the only way the build can fail is the bogus
+;;; flag handed to cc -- which is the point.
+(pub fn main () int
+  (return 0))

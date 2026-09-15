@@ -67,8 +67,12 @@ SEX_TEST_PROGRAMS = hello-world lists comments unicode serialize
 check-modules: sexc
 	@$(MAKE) --no-print-directory -C ./tests/modules check SEXC=../../sexc
 
+# The failure paths are checked end to end; see tests/exit-code/Makefile.
+check-exit-code: sexc
+	@$(MAKE) --no-print-directory -C ./tests/exit-code check SEXC=../../sexc
+
 run-tests: sexc sex-tests sextest
-	./sex-tests && ./sextest --sexc=./sexc $(SEX_TEST_PROGRAMS:%=./tests/sex-programs/%.sex) && $(MAKE) check-modules
+	./sex-tests && ./sextest --sexc=./sexc $(SEX_TEST_PROGRAMS:%=./tests/sex-programs/%.sex) && $(MAKE) check-modules && $(MAKE) check-exit-code
 
 clean:
 	rm -f $(OBJ) main.o
@@ -77,4 +81,4 @@ clean:
 	rm -f sexc sex-tests sextest
 	$(MAKE) -C ./tests/modules clean
 
-.PHONY: clean run-tests sex-tests sextest check-modules
+.PHONY: clean run-tests sex-tests sextest check-modules check-exit-code
