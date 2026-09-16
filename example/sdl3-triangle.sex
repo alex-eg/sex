@@ -8,13 +8,29 @@
 ;;; triangle is and how far it has spun are passed in as uniforms, so
 ;;; the geometry itself is uploaded once and never touched again.
 ;;;
-;;; Build:
+;;; Build, macOS:
 ;;;   ./sexc example/sdl3-triangle.sex -o sdl3-triangle -- `pkg-config --cflags --libs sdl3` -framework OpenGL
+;;;
+;;; Build, Linux:
+;;;   ./sexc example/sdl3-triangle.sex -o sdl3-triangle -- `pkg-config --cflags --libs sdl3 gl`
+;;;
+;;; The GL header is the one platform difference, and #+ / #- picks it.
+;;; Apple keeps the core-profile entry points in <OpenGL/gl3.h> and
+;;; links them through -framework OpenGL, which no pkg-config file
+;;; describes; everywhere else the prototypes come from <GL/glext.h>
+;;; with GL_GLEXT_PROTOTYPES defined, and -lGL -- `pkg-config --libs
+;;; gl' -- resolves them. SDL3/SDL_opengl.h is not the shortcut it
+;;; looks like: on Apple it resolves to the 2.1 header, which has no
+;;; glGenVertexArrays and so cannot bind the VAO this program needs.
 
-(define GL-SILENCE-DEPRECATION 1)       ; OpenGL is deprecated on macOS
+#+macosx (define GL-SILENCE-DEPRECATION 1) ; OpenGL is deprecated on macOS
 
 (include SDL3/SDL.h)
-(include OpenGL/gl3.h)
+
+#+macosx (include OpenGL/gl3.h)
+#-macosx (define GL-GLEXT-PROTOTYPES 1)
+#-macosx (include GL/gl.h)
+#-macosx (include GL/glext.h)
 
 (define WINDOW-WIDTH 800)
 (define WINDOW-HEIGHT 600)
