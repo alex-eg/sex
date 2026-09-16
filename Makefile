@@ -61,7 +61,7 @@ sextest:
 	$(MAKE) -C ./tools/sextest sextest
 	cp ./tools/sextest/sextest .
 
-SEX_TEST_PROGRAMS = hello-world lists comments unicode serialize
+SEX_TEST_PROGRAMS = hello-world lists comments unicode serialize features
 
 # Multi-module linking is checked end to end; see tests/modules/Makefile.
 check-modules: sexc

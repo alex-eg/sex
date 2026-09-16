@@ -7,6 +7,8 @@
 ;;;   - a leading `.' rewritten to the symbol `dot-access'
 ;;;   - `;' comments preserved as (comment "...") forms, so they can be
 ;;;     re-emitted into the generated C (keeping the source mapping)
+;;;   - #+ / #- feature expressions, which decide at read time what the
+;;;     compiler gets to see at all
 ;;; It also records the source location of every form it reads (see
 ;;; utils' form-source), so the C writer can emit #line directives.
 
@@ -15,6 +17,8 @@
   (scheme base)                         ; make-parameter
   (chicken base)
   (chicken pathname)
+  (chicken platform)                    ; software-version, machine-type
+  (only srfi-1 every any)               ; srfi-1 also has an append-reverse
   utils)
 
 ;;; Sentinels for structural tokens
@@ -160,7 +164,8 @@
    ((string->number s) => identity)
    (else (string->symbol s))))
 
-;;; #-dispatch: booleans, characters, vectors, block/datum comments
+;;; #-dispatch: booleans, characters, vectors, block/datum comments,
+;;; feature expressions
 (define (read-hash port)
   (let ((c (get-ch port)))
     (cond
@@ -171,7 +176,45 @@
      ((char=? c #\() (list->vector (read-list port close-paren)))
      ((char=? c #\|) (skip-block-comment port 1) (next-token port))
      ((char=? c #\;) (read-datum port) (next-token port)) ; datum comment
+     ((char=? c #\+) (read-conditional port #t))
+     ((char=? c #\-) (read-conditional port #f))
      (else (error "Unsupported # syntax" c)))))
+
+;;; Feature expressions
+;;;
+;;;   #+linux   (include GL/gl.h)      kept on Linux
+;;;   #-macosx  (foo)                  kept only on other than macOS
+;;;   #+(and unix (not macosx)) (bar)  and / or / not combine them
+;;;
+(define (platform-features)
+  (list (software-version) (software-type) (machine-type)))
+
+;;; The host's features are the default, so anything reading Sex sees
+;;; what the compiler would. sexc rebinds this to add --features
+(define current-features (make-parameter (platform-features)))
+
+(define (feature-true? test)
+  (cond
+   ((symbol? test) (and (memq test (current-features)) #t))
+   ((pair? test)
+    (case (car test)
+      ((and) (every feature-true? (cdr test)))
+      ((or) (any feature-true? (cdr test)))
+      ((not)
+       (if (and (pair? (cdr test)) (null? (cddr test)))
+           (not (feature-true? (cadr test)))
+           (error "Feature expression `not' takes exactly one operand" test)))
+      (else (error "Unknown operator in feature expression" (car test)))))
+   (else (error "Malformed feature expression" test))))
+
+;;; The #-/#+ preceded datum is always read -- there is no other way
+;;; to know where it ends -- and then either returned or dropped
+(define (read-conditional port keep-when)
+  (let ((keep (eq? keep-when (feature-true? (read-datum port)))))
+    (if keep
+        (read-datum port)
+        (begin (read-datum port)
+               (next-token port)))))
 
 ;;; #t / #true / #f / #false. `val' is the boolean; consume any
 ;;; trailing name characters and validate

@@ -9,6 +9,7 @@
         (chicken process)
         (chicken process-context)
         (chicken port)
+        (chicken string)                ; string-split
         fmt
         fmt-c-writer
         getopt-long
@@ -31,6 +32,17 @@
                       (required #f)
                       (value #f)
                       (single-char #\c))
+      (features ,(fmt #f "Comma-separated feature names, added to the host's own" nl
+                      (pad padding) "for #+ and #- feature expressions. May be given" nl
+                      (pad padding) "more than once")
+                (required #f)
+                (value #t)
+                (single-char #\f))
+      (no-platform-features
+       ,(fmt #f "Leave out the host's own features. With --features," nl
+             (pad padding) "this reads a file the way another platform would")
+       (required #f)
+       (value #f))
       (emit-c "Emit C code"
               (required #f)
               (value #f)
@@ -97,6 +109,15 @@
           ((equal? v "toplevel") 'toplevel)
           ((equal? v "none") 'none)
           (else (error "--line-directives must be statement, toplevel or none, got" v)))))
+
+
+
+;;; --features may be given more than once, and each may name several.
+;;; Collect all of them
+(define (cli-features args)
+  (append-map (lambda (entry)
+                (map string->symbol (string-split (cdr entry) ",")))
+              (filter (lambda (entry) (eq? (car entry) 'features)) args)))
 
 (define (get-input-file args)
   (let ((rest-args (get-rest-args args)))
@@ -181,6 +202,14 @@ status, which is ours to pass on."
        (when help
          (print-help)
          (return #f))
+       ;; Read time comes before everything, so the features have to be
+       ;; in place before the first form is read
+       (current-features
+        (append (if (get-arg args 'no-platform-features #f)
+                    (list)
+                    (platform-features))
+                (cli-features args)))
+
        (when (get-arg args 'public-interface #f)
          (assert (not (eq? input 'stdin)) "Error: --public-interface requires file argument")
 

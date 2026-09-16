@@ -31,13 +31,21 @@ Options:
  --c-compiler=ARG         Select C compiler. Defaults to value of SEX_CC
                           environment variable, or if it is empty, to cc
  -c, --compile-object     Compile object file instead of executable program
- -C, --preprocess         Emit C code
+ -f, --features=ARG       Comma-separated feature names, added to the host's own
+                          for #+ and #- feature expressions. May be given
+                          more than once
+ --no-platform-features   Leave out the host's own features. With --features,
+                          this reads a file the way another platform would
+ -C, --emit-c             Emit C code
  --public-interface       Get module's public interface
  -h, --help               Show this help
  -m, --macro-expand       Emit macro-expanded semantically processed Sex code
-                          (sort of IR). May be useful for debugging
  -o, --output=ARG         Write output to file. Default file name is a.out.
                           If -E or -m options are provided, defaults to stdout
+ --line-directives=ARG    How much #line information to emit: statement (default),
+                          toplevel, or none. `statement' is what makes a debugger
+                          land on the right source line; `none' is for reading -C
+                          output by eye
 #+end_src
 ** Compiling Hello World
 #+begin_src shell
@@ -100,6 +108,39 @@ environment variable.
 Module's public interface consists of everything declared
 ~pub~. Structures, function, macros, types, variables can be
 public.
+
+** Read-time feature expressions
+Sex is able to use ~#+~ and ~#-~ for conditional compilation: the form that
+follows is kept only when the feature expression is true, and otherwise
+is read and thrown away.
+
+#+begin_src scheme
+#+macosx (include OpenGL/gl3.h)
+#-macosx (include GL/gl.h)
+
+#+(and unix (not macosx)) (define HAVE-EPOLL 1)
+#+end_src
+
+An expression is a feature name, or ~and~, ~or~ and ~not~ of them.
+
+This is read time, not compile time. What does not apply never reaches macro
+expansion, the type database or the generated C.
+
+The features are the host's ~(software-version)~, ~(software-type)~
+and ~(machine-type)~, e.g. ~macosx unix arm64~ or ~linux unix
+x86-64~. ~--features~ adds to them:
+
+#+begin_src shell
+sexc prog.sex -f debug,with-sdl
+sexc prog.sex --features=debug --features=with-sdl
+#+end_src
+
+A feature is never taken away. The host's features can be disabled,
+e.g. for checking output for other platform:
+
+#+begin_src shell
+sexc example/sdl3-triangle.sex -C --no-platform-features --features=linux,unix,x86-64
+#+end_src
 
 ** Syntactic macros
 Sex has support for syntactic macros. Macro definitions look like

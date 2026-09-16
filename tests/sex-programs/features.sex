@@ -1,0 +1,23 @@
+(compilation "--features=test-on")
+(input)
+(output "selected" "on" "and-not")
+(return 0)
+
+;;; #+ and #- pick what the compiler gets to see. `test-on' is handed
+;;; to sexc by the (compilation ...) form above, so this program reads
+;;; the same way on every platform.
+
+(include stdio.h)
+
+#+test-on (define GREETING "on")
+#-test-on (define GREETING "off")
+
+#-test-on (pub fn main () int (puts "the whole function is dropped") (return 1))
+
+(pub fn main () int
+  ;; ...and inside a form, not only at toplevel
+  (puts #+test-on "selected" #-test-on "rejected")
+  (puts GREETING)
+  #+(and test-on (not test-off)) (puts "and-not")
+  #-test-on (puts "never printed")
+  (return 0))
