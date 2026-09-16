@@ -7,36 +7,63 @@
         (chicken port)
         (chicken process)
         (chicken process-context)
+        (chicken string)                ; string-split
         fmt
         getopt-long
         reader                          ; read-raw-forms, shared with sexc
-        srfi-1)
+        srfi-1
+        srfi-13)                        ; string-prefix?
 
 (define (print-help)
   (fmt #t "Usage: sextest [options] filename" nl
        "Options:" nl
        (usage opts-grammar) nl))
 
-(define (process-file target-path)
-  (let ((contents (read-raw-forms target-path)))
-    (foldl (lambda (acc elt)
-             (case (car elt)
-               ((compilation input output return)
-                (cons
-                 (append (car acc) (list elt))
-                 (cdr acc)))
-               (else
-                (cons
-                 (car acc)
-                 (append (cdr acc) (list elt))))))
-           (cons (list) (list))
-           contents)))
+(define (split-settings contents)
+  (foldl (lambda (acc elt)
+           (case (car elt)
+             ((compilation input output return)
+              (cons
+               (append (car acc) (list elt))
+               (cdr acc)))
+             (else
+              (cons
+               (car acc)
+               (append (cdr acc) (list elt))))))
+         (cons (list) (list))
+         contents))
 
-(define (compile src flags sexc)
+;;; --features from the (compilation ...) form, which we have to honour
+;;; ourselves: the program is read here and printed back out for sexc,
+;;; so #+ and #- are resolved on this side
+(define (compilation-features settings)
+  (let ((compilation (assoc 'compilation settings)))
+    (if compilation
+        (append-map (lambda (flag)
+                      (if (string-prefix? "--features=" flag)
+                          (map string->symbol
+                               (string-split (substring flag 11) ","))
+                          (list)))
+                    (string-split (cadr compilation)))
+        (list))))
+
+(define (process-file target-path)
+  (let* ((first-pass (split-settings (read-raw-forms target-path)))
+         (features (compilation-features (car first-pass))))
+    (if (null? features)
+        first-pass
+        (parameterize ((current-features (append (platform-features) features)))
+          (split-settings (read-raw-forms target-path))))))
+
+(define (compile src compilation sexc)
   (let ((compiler (or
                    (and sexc (cdr sexc))
                    (get-environment-variable "SEXC")
                    "sexc"))
+        ;; (compilation "--features=x -- -O2") -- one string
+        (flags (if compilation
+                   (string-split (cadr compilation))
+                   (list)))
         (compiled-file (create-temporary-file)))
     ;; `process' returns one record; `process-input-port' is named from
     ;; the child's side, so it is the port we write to.
@@ -110,7 +137,7 @@
   (let* ((settings-and-src (process-file path))
          (settings (car settings-and-src))
          (src (cdr settings-and-src))
-         (compiled-file (compile src (assoc 'compile settings) sexc)))
+         (compiled-file (compile src (assoc 'compilation settings) sexc)))
     (if (not compiled-file)
         (begin (fmt #t "Failed to compile " path nl)
                #f)
